@@ -1,5 +1,5 @@
 # Entwicklungsprojekt WS 25/26 von Florian Roß und Karim Khemiri
-DataDetective, ein Interaktiven Spiel-System zur Aufklärung über Manipulation und Visualisierung von und mit Daten.
+DataDetective, ein Interaktiven Spiel-System zur Aufklärung über Veränderungen und Manipulation der Visualisierung von und mit Daten.
 
 
 ## Problemstellung
