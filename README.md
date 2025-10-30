@@ -34,4 +34,13 @@ Das Spiel wird basiert hauptsächlich auf 2D-Grafiken und Tile basierten Element
 
 - Game Engine 2D (UE): Viele mitgelieferte Features und Tools, mehr Komplexität für weniger Entiwcklungsaufwand, Unklare Performance auf Endgeräten, nicht lightweight 
 - App über Kotlin (ähnlich zu MOCO), relativ einfache Umsetzung und leightweight App-Development, eingeschränkte Möglichkeiten zur spezifischen Visualisierung 
-- Refresh JavaScript über D3, Umsetzung als Web-Basierte Anwendung z.B. wie Discord, unklare Performance,  
+- Refresh JavaScript über D3, Umsetzung als Web-Basierte Anwendung z.B. wie Discord, unklare Performance,
+
+
+## Quellen:
+https://www.hb.fh-muenster.de/opus4/frontdoor/deliver/index/docId/17786/file/ITB-Arbeitsberichte_Band11.pdf
+
+https://science.orf.at/v2/stories/2941289/
+
+https://mediakompetent.de/manipulation-mit-daten-erkennen/
+
