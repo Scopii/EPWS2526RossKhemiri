@@ -1,7 +1,12 @@
 # Entwicklungsprojekt WS 25/26 von Florian Roß und Karim Khemiri
 DataDetective, ein Interaktiven Spiel-System zur Aufklärung über Veränderungen und Manipulation der Visualisierung von und mit Daten.
 
+## Wie man den Code startet
+1. In Android Studio das Projekt DataDetective als Root Folder öffnen
+2. Gradle Syncen/Builden
+das wars
 
+   
 ## Problemstellung
 Gesellschaftlich wird es durch Digitalisierung immer wichtiger Statistiken und Daten in der heutigen Zeit allgemein besser einschätzen, einordnen, filtern und bewerten zu können. Besonders durch visuelle Darstellungen werden Information irreführend oder emotional vermittelt, um die Interpretation zu beeinflussen. Dieser Prozess ist für viele Menschen aufgrund von limitiertem Fachwissen oder mangelnder Aufklärung teils schwer umsetzbar. Korrelation wird von vielen oft als ausreichender Faktor für Kausalität gehalten. Falscher Umgang dieser Inhalte führt zu Polarisation, unreflektierter Meinungsbildung und fördert Falschinformationen.
 
