@@ -2,7 +2,7 @@
 DataDetective, ein Interaktiven Spiel-System zur Aufklärung über Veränderungen und Manipulation der Visualisierung von und mit Daten.
 
 ## Wie man den Code startet
-1. In Android Studio das Projekt DataDetective als Root Folder öffnen
+1. In Android Studio das Projekt mit dem Folder DataDetective als Root öffnen
 2. Gradle Syncen/Builden
 das wars
 
