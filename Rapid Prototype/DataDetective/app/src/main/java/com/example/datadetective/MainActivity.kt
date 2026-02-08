@@ -3,10 +3,13 @@ package com.example.datadetective
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.runtime.remember
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.example.datadetective.data.UserData
 import com.example.datadetective.ui.screens.AchievementsScreen
 import com.example.datadetective.ui.screens.GameScreen
 import com.example.datadetective.ui.screens.HomeScreen
@@ -15,6 +18,8 @@ import com.example.datadetective.ui.screens.NewsScreen
 import com.example.datadetective.ui.screens.ResultScreen
 import com.example.datadetective.ui.theme.DataDetectiveTheme
 import com.example.datadetective.viewmodel.GameViewModel
+import androidx.lifecycle.ViewModelProvider
+import com.example.datadetective.ui.screens.UserScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -22,7 +27,17 @@ class MainActivity : ComponentActivity() {
         setContent {
             DataDetectiveTheme {
                 val navController = rememberNavController()
-                val viewModel: GameViewModel = viewModel()
+
+                val data = remember { UserData(applicationContext) }
+
+                val viewModel: GameViewModel = viewModel(
+                    factory = object : ViewModelProvider.Factory {
+                        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                            @Suppress("UNCHECKED_CAST")
+                            return GameViewModel(data) as T
+                        }
+                    }
+                )
 
                 NavHost(navController = navController, startDestination = "home") {
 
@@ -32,6 +47,7 @@ class MainActivity : ComponentActivity() {
                             onStartGame = { navController.navigate("game") },
                             onNews = {navController.navigate("news")},
                             onAchievements = {navController.navigate("achievements")},
+                            onUserScreen = {navController.navigate("personal")},
                         )
                     }
 
@@ -44,13 +60,20 @@ class MainActivity : ComponentActivity() {
 
                     composable("achievements") {
                         AchievementsScreen(
-                            userProfile = viewModel.userProfile,
-                            onSetAchievement = { navController.navigateUp() }
+                            viewModel = viewModel,
+                            onSetAchievement = { titel ->
+                                viewModel.setTitel(titel)
+                                navController.navigateUp()
+                            }
                         )
                     }
 
                     composable("news") {
                         NewsScreen()
+                    }
+
+                    composable("personal") {
+                        UserScreen(viewModel)
                     }
 
                     composable("info") {

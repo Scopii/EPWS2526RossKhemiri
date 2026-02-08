@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -15,9 +16,9 @@ fun HomeScreen(
     onStartGame: () -> Unit,
     onNews: () -> Unit,
     onAchievements : () -> Unit,
+    onUserScreen: () -> Unit,
 ) {
-    // Wenn sich ViewModel ändert neues UI
-    val userProfile = viewModel.userProfile
+    val profile = viewModel.userProfile.collectAsState().value
 
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp),
@@ -33,17 +34,20 @@ fun HomeScreen(
     ) {
 
         Button(onClick = onAchievements) {
-            Text("${if (userProfile.titel != null) userProfile.titel + " " else ""}${userProfile.name}", style = MaterialTheme.typography.headlineLarge)
+            Text(
+                "${if (profile.titel != null) profile.titel + " " else ""}${profile.name}",
+                style = MaterialTheme.typography.headlineLarge
+            )
         }
         Spacer(modifier = Modifier.height(32.dp))
 
         // Game Anzeige
         Card {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text("Level: ${userProfile.level}")
-                Text("XP: ${userProfile.xp} / ${userProfile.level * 100}")
+                Text("Level: ${profile.level}")
+                Text("XP: ${profile.xp} / ${profile.level * 100}")
                 LinearProgressIndicator(
-                    progress = (userProfile.xp % 100) / 100f,
+                    progress = (profile.xp % 100) / 100f,
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -57,6 +61,14 @@ fun HomeScreen(
 
         Button(onClick = onNews) {
             Text("News")
+        }
+
+        Button(onClick = onUserScreen) {
+            Text("Personal")
+        }
+
+        Button(onClick = { viewModel.resetProgress() }) {
+            Text("Reset Stats")
         }
     }
 }
