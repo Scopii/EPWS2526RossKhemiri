@@ -44,7 +44,9 @@ class MainActivity : ComponentActivity() {
                     composable("home") {
                         HomeScreen(
                             viewModel = viewModel,
-                            onStartGame = { navController.navigate("game") },
+                            onStartGame  = { mode -> viewModel.startGame(mode)
+                                navController.navigate("game")
+                            },
                             onNews = {navController.navigate("news")},
                             onAchievements = {navController.navigate("achievements")},
                             onUserScreen = {navController.navigate("personal")},
@@ -69,7 +71,14 @@ class MainActivity : ComponentActivity() {
                     }
 
                     composable("news") {
-                        NewsScreen()
+                        NewsScreen(
+                            onOpenInfo = { chartData ->
+                                viewModel.infoTasks = listOf(
+                                    viewModel.createInfoTasks(chartData)
+                                )
+                                navController.navigate("info")
+                            }
+                        )
                     }
 
                     composable("personal") {
@@ -77,28 +86,36 @@ class MainActivity : ComponentActivity() {
                     }
 
                     composable("info") {
-                        val question = viewModel.currentTask
-                        if (question != null)
-                        InfoScreen(question)
-                    }
+                        val tasks = viewModel.infoTasks
+                        if (tasks.isNotEmpty()) {
+                            InfoScreen(tasks = tasks, onBack = { navController.navigateUp() })
+                    }}
 
                     composable("result") {
                         val question = viewModel.currentTask
-                        val selectedIndex = viewModel.selectedAnswerIndex
+                        val selectedIndices = viewModel.selectedAnswerIndices
 
-                        if (question != null && selectedIndex != null) {
+                        if (question != null) {
+                            val fixedTask = remember(question.id) { question }
+
                             ResultScreen(
-                                task = question,
-                                selectedAnswerIndex = selectedIndex,
+                                task = fixedTask,
+                                selectedAnswerIndices = selectedIndices,
                                 onNext = {
-                                    viewModel.nextQuestion()
                                     navController.navigate("game") {
                                         popUpTo("game") { inclusive = true }
                                     }
+                                    viewModel.nextQuestion()
                                 },
-                                onInfo = {navController.navigate("info")},
+                                onInfo = {
+                                    viewModel.prepareInfoTasks()
+                                    navController.navigate("info")}
                             )
                         }
                     }
+
+                }
+            }
         }
-            }}}}
+    }
+}

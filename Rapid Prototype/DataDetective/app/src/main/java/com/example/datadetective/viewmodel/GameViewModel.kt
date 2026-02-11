@@ -5,15 +5,21 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.datadetective.data.ChartData
+import com.example.datadetective.data.Manipulation
 import com.example.datadetective.data.Task
 import com.example.datadetective.data.TaskGenerator
 import com.example.datadetective.data.UserData
 import com.example.datadetective.data.UserProfile
 import com.example.datadetective.data.sampleDataSet
+import infoData
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-
+enum class ManipulationMode {
+    SINGLE,
+    DOUBLE
+}
 class GameViewModel(
     private val userData: UserData
 ) : ViewModel() {
@@ -35,29 +41,39 @@ class GameViewModel(
 
     var currentTask by mutableStateOf<Task?>(null)
         private set
-    var selectedAnswerIndex by mutableStateOf<Int?>(null)
+
+    var infoTasks by mutableStateOf<List<Task>>(emptyList()) //vordefinierte infotasks zu allen manipulations/diagram kombinationen
+    var selectedAnswerIndices by mutableStateOf(setOf<Int>())
+        private set
+    var manipulationMode by mutableStateOf(ManipulationMode.SINGLE) //Aktuell ausgewählter spielmodus
         private set
 
-    init {
+    //Wird nach auswahl des Schwierigkeitsgrad aufgerufen
+    fun startGame(mode: ManipulationMode) {
+        manipulationMode = mode
         nextQuestion()
     }
-
+    //Generiert neue Aufgabe abhängig vom aktuellen modus
     fun nextQuestion() {
-        currentTask = TaskGenerator.generate(sampleDataSet.random())
-        selectedAnswerIndex = null
+        currentTask = TaskGenerator.generate(sampleDataSet.random(), manipulationMode)
+        selectedAnswerIndices = emptySet()
     }
-
     fun selectAnswer(index: Int) {
-        selectedAnswerIndex = index
+        selectedAnswerIndices =
+            if (index in selectedAnswerIndices)
+                selectedAnswerIndices - index
+            else
+                selectedAnswerIndices + index
     }
-
     fun submitAnswer() {
         val task = currentTask ?: return
-        val selected = selectedAnswerIndex ?: return
-        val isCorrect = selected == task.correctOptionIndex
-
+        val isCorrect = selectedAnswerIndices == task.correctOptionIndices
         viewModelScope.launch {
-            userData.submitAnswer(isCorrect) // Eine Funktion!
+            task.manipulations.forEach { manipulation ->
+                userData.submitAnswer(
+                    correctAnswer = isCorrect,
+                    manipulationType = manipulation.type)
+            }
         }
     }
 
@@ -72,4 +88,61 @@ class GameViewModel(
             userData.resetProgress()
         }
     }
+    fun prepareInfoTasks() { //Infotask(s) für where was this used button
+        val task = currentTask ?: return
+        val chartType = task.chartType
+
+        val tasks = task.manipulations.mapNotNull { manipulation ->
+
+            val example = infoData.firstOrNull {
+                chartType in it.supportedChartTypes && manipulation.type in it.supportedManipulations
+            } ?: return@mapNotNull null
+
+            Task(
+                id = -example.id,
+                title = example.title,
+                description = example.description,
+                chartType = chartType,
+                unit = example.unit,
+                yValues = example.yValues,
+                xData = example.xData,
+                options = emptyList(),
+                correctOptionIndices = emptySet(),
+                manipulations = listOf(
+                    Manipulation(
+                        type = manipulation.type,
+                        intensity = example.fixedIntensity ?: 1f,
+                        categoryRange = example.fixedCategoryRange,
+                        fixedMinValue = example.fixedMinValue,
+                        fixedMaxValue = example.fixedMaxValue)),
+                explanation = example.explanation)
+        }
+        infoTasks = tasks
+    }
+    fun createInfoTasks(data: ChartData): Task { //infotasks für newsseite
+
+        val manipulations = data.supportedManipulations.map { type ->
+            Manipulation(
+                type = type,
+                intensity = data.fixedIntensity ?: 1f,
+                categoryRange = data.fixedCategoryRange,
+                fixedMinValue = data.fixedMinValue,
+                fixedMaxValue = data.fixedMaxValue)
+        }
+
+        return Task(
+            id = -data.id,
+            title = data.title,
+            description = data.description,
+            chartType = data.supportedChartTypes.first(),
+            unit = data.unit,
+            yValues = data.yValues,
+            xData = data.xData,
+            options = emptyList(),
+            correctOptionIndices = emptySet(),
+            manipulations = manipulations,
+            explanation = data.explanation
+        )
+    }
+
 }

@@ -10,7 +10,15 @@ data class ChartData(
     val unit: String,
     val description: String,
     val supportedChartTypes: Set<ChartType>,
+
+    //Nur für InfoData
+    val supportedManipulations: Set<ManipulationType> = emptySet(),
     val explanation: String? = null,
+    // feste Manipulationsparameter für Infodata
+    val fixedIntensity: Float? = null,
+    val fixedCategoryRange: IntRange? = null,
+    val fixedMinValue: Float? = null,
+    val fixedMaxValue: Float? = null
 )
 
 
@@ -29,7 +37,7 @@ val sampleDataSet = listOf(
         title = "Kino-Umsatz 2019-2024",
         yValues = listOf(1024f, 318f, 373f, 722f, 929f, 868f),
         xData = listOf("2019","2020", "2021", "2022", "2023", "2024"),
-        unit = "Mio.€",
+        unit = "Mio€",
         description = "Jährlicher Kino-Umsatz in Deutschland",
         supportedChartTypes = setOf(ChartType.BAR,ChartType.HORIZONTAL_BAR)),
     ChartData(
@@ -47,7 +55,16 @@ val sampleDataSet = listOf(
         xData = listOf("2015","2016","2017","2018","2019","2020","2021","2022","2023","2024"),
         unit = "°C",
         description = "Jährliche durchschnittliche Temperatur in Deutschland",
-        supportedChartTypes = setOf(ChartType.LINE))
+        supportedChartTypes = setOf(ChartType.LINE)),
+    ChartData(
+        id = 5,
+        title = "Stimmenanteile bei der Stadtratswahl",
+        yValues = listOf(28f, 31f, 34f, 37f),
+        xData = listOf("Partei A", "Partei B", "Partei C", "Partei D"),
+        unit = "%",
+        description = "Ergebnisse einer fiktiven Stadtratswahl.",
+        supportedChartTypes = setOf(ChartType.BAR, ChartType.HORIZONTAL_BAR)
+    )
 )
 
 

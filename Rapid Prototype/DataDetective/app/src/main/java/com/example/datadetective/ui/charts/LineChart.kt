@@ -5,9 +5,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-
 import android.graphics.Paint
 import androidx.compose.ui.graphics.nativeCanvas
+import kotlin.math.roundToInt
 
 @Composable
 fun LineChart(
@@ -19,7 +19,9 @@ fun LineChart(
     xStart: Float,          //startindex des sichtbaren Kategoriebereichs
     xEnd: Float,            //endindex des sichtbaren Kategoriebereichs
     ySteps: Int = 4,
-    unit: String = "") {
+    highlightedIndex: Int? = null, //index der hervorgehobenen kategorie
+    highlightEnabled: Boolean = false,
+    unit: String = "", ) {
 
     Canvas(modifier = modifier) {
 
@@ -31,7 +33,7 @@ fun LineChart(
 
         val chartWidth = size.width - paddingLeft - paddingRight
         val chartHeight = size.height - paddingTop - paddingBottom
-
+        val baseColor = Color(0xFF3F51B5)
         val paint = Paint().apply {
             color = android.graphics.Color.BLACK
             textSize = 24f
@@ -53,7 +55,7 @@ fun LineChart(
 
             //y-achsenbeschriftung
             drawContext.canvas.nativeCanvas.drawText(
-                "${value.toInt()} $unit",
+                "${formatAxisValue(value, 1)} $unit",
                 paddingLeft - 10f,
                 y + 8f,
                 paint.apply { textAlign = Paint.Align.RIGHT })
@@ -89,25 +91,42 @@ fun LineChart(
 
         //Chart-Linie
         for (i in 0 until yData.lastIndex) {
+            // Farb-Hervorhebung bei COLOR_HIGHLIGHTING (Linie)
+            val isSegmentHighlighted =
+                highlightedIndex != null &&
+                        (i == highlightedIndex || i + 1 == highlightedIndex)
+            val lineColor =
+                if (!highlightEnabled)
+                    baseColor
+                else if (isSegmentHighlighted)
+                    baseColor
+                else
+                    baseColor.copy(alpha = 0.6f) //transparenz wert für nicht gehighlightede indicies
             drawLine(
-                color = Color(0xFF2196F3),
+                color = lineColor,
                 start = Offset(xForIndex(i), yForValue(yData[i])),
                 end = Offset(xForIndex(i + 1), yForValue(yData[i + 1])),
-                strokeWidth = 4f)
-        }
+                strokeWidth = 4f
+            )
 
         //Punkte + X-Beschriftung
         yData.forEachIndexed { index, value ->
             val x = xForIndex(index)
             val y = yForValue(value)
-            if (index.toFloat() < xStart || index.toFloat() > xEnd) return@forEachIndexed
-            // Punkt
-            drawCircle(
-                color = Color(0xFF1976D2),
-                radius = 6f,
-                center = Offset(x, y))
+            if (index.toFloat() !in xStart..xEnd) return@forEachIndexed
 
-            // X-achsenbeschriftun
+            // Farb-Hervorhebung bei COLOR_HIGHLIGHTING (Punkte)
+            val pointColor = highlightColor(
+                baseColor = baseColor,
+                index = index,
+                highlightedIndex = highlightedIndex,
+                highlightEnabled = highlightEnabled)
+            drawCircle(
+                color = pointColor,
+                radius = 6f,
+                center = Offset(x, y)
+            )
+            // X-achsenbeschriftung
             if (index < xData.size) {
                 drawContext.canvas.nativeCanvas.drawText(
                     xData[index],
@@ -117,4 +136,5 @@ fun LineChart(
             }
         }
     }
-}
+}}
+

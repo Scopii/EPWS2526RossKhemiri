@@ -13,7 +13,7 @@ import com.example.datadetective.viewmodel.GameViewModel
 @Composable
 fun GameScreen(viewModel: GameViewModel, onAnswerLocked:()-> Unit) {
     val question = viewModel.currentTask //aktuelle Aufgabe
-    val selectedIndex = viewModel.selectedAnswerIndex //ausgewählte antwort
+    val selectedIndices = viewModel.selectedAnswerIndices //ausgewählte antwort
 
     question?.let { q ->
         Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
@@ -27,7 +27,7 @@ fun GameScreen(viewModel: GameViewModel, onAnswerLocked:()-> Unit) {
 
             // Antworten + Highlighting
             q.options.forEachIndexed { index, text ->
-                val isSelected = selectedIndex == index
+                val isSelected = index in selectedIndices
 
                 Card(
                     modifier = Modifier
@@ -57,7 +57,7 @@ fun GameScreen(viewModel: GameViewModel, onAnswerLocked:()-> Unit) {
                     viewModel.submitAnswer()
                     onAnswerLocked()
                 },
-                enabled = selectedIndex != null,
+                enabled = selectedIndices.isNotEmpty(),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Antwort bestätigen")

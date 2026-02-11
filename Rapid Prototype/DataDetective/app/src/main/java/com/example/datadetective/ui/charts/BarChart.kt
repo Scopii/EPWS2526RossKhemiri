@@ -8,7 +8,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.nativeCanvas
-
+import kotlin.math.pow
 
 @Composable
 fun BarChart(
@@ -19,6 +19,9 @@ fun BarChart(
     maxY: Float,            //obere Grenze y-achse
     xStart: Float,          //startindex des sichtbaren Kategoriebereichs
     xEnd: Float,            //endindex des sichtbaren Kategoriebereichs
+    distortionFactor: Float = 1f, // Verzerrung der Balkenhöhe
+    highlightedIndex: Int? = null, // Welche Kategorie ist hervorgehoben
+    highlightEnabled: Boolean = false,
     ySteps: Int = 4,
     unit: String = "") {
 
@@ -32,7 +35,7 @@ fun BarChart(
 
         val chartWidth = size.width - paddingLeft - paddingRight
         val chartHeight = size.height - paddingTop - paddingBottom
-
+        val baseColor =  Color(0xFF3F51B5)
         val paint = Paint().apply { //für textbeschrooiftungen
             color = android.graphics.Color.BLACK
             textSize = 24f
@@ -54,7 +57,7 @@ fun BarChart(
 
             //y-achsenbeschriftung
             drawContext.canvas.nativeCanvas.drawText(
-                "${value.toInt()} $unit",
+                "${formatAxisValue(value, 1)} $unit",
                 paddingLeft - 10f,
                 y + 8f,
                 paint.apply { textAlign = Paint.Align.RIGHT })
@@ -87,19 +90,29 @@ fun BarChart(
             if (localIndex<0f|| localIndex > visibleSpan) return@forEachIndexed
 
             val xCenter = paddingLeft + stepWidth * (localIndex + 0.5f)
-            val normalized = (value - minY) / (maxY - minY)
-            val barHeight = normalized.coerceIn(0f, 1f) * chartHeight
+            val normalized = ((value - minY) / (maxY - minY)).coerceIn(0f, 1f)
+
+            //Verzerrung der Balkenhöhe bei DISTORTED_BAR_LENGTH
+            val relativeHeight = normalized.pow(distortionFactor)
+            val barHeight = relativeHeight * chartHeight
             val yTop = paddingTop + chartHeight - barHeight
 
+            // Farb-Hervorhebung bei COLOR_HIGHLIGHTING
+            val barColor = highlightColor(
+                baseColor = baseColor,
+                index = index,
+                highlightedIndex = highlightedIndex,
+                highlightEnabled = highlightEnabled
+            )
             // Balken
             drawRect(
-                color = Color(0xFF2196F3),
+                color = barColor,
                 topLeft = Offset(xCenter - barWidth / 2, yTop),
                 size = Size(barWidth, barHeight))
 
             // Zahlenwert über dem Balken
             drawContext.canvas.nativeCanvas.drawText(
-                "${value.toInt()} $unit",
+                "${formatAxisValue(value, 1)} $unit",
                 xCenter,
                 yTop - 8f,
                 paint.apply {
@@ -117,3 +130,26 @@ fun BarChart(
     }
 }
 
+
+//hilfsfunktion für COLORHIGHLIGHTING
+fun highlightColor(
+    baseColor: Color,
+    index: Int,
+    highlightedIndex: Int?,
+    highlightEnabled: Boolean): Color {
+
+    if (!highlightEnabled || highlightedIndex == null) {
+        return baseColor
+    }
+
+    return if (index == highlightedIndex) {
+        baseColor                      //volle Farbe
+    } else {
+        baseColor.copy(alpha = 0.85f)   //leicht transparent
+    }
+}
+
+//Hilfsfunktion für dezimalzahlen
+fun formatAxisValue(value: Float, decimals: Int = 1): String {
+    return "%.${decimals}f".format(value)
+}

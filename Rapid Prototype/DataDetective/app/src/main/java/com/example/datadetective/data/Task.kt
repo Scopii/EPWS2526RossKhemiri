@@ -8,8 +8,10 @@ data class Task(
     val chartType: ChartType,
     val description: String,
     val unit: String,
-    val manipulation: Manipulation,
+    val manipulations: List<Manipulation>,
     val yValues: List<Float>,
     val xData: List<String>,
     val options: List<String>,
-    val correctOptionIndex: Int, )
+    val correctOptionIndices: Set<Int>,
+    val explanation: String? = null //Nur für infochart
+)

@@ -10,6 +10,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.datadetective.data.ChartType
+import com.example.datadetective.data.ManipulationType
 import com.example.datadetective.data.Task
 
 
@@ -24,39 +25,71 @@ fun ManipulatedChart(task: Task, showCorrect: Boolean, modifier: Modifier = Modi
     val ydata = task.yValues
     val xData = task.xData
     val unit = task.unit
-    val manipulation = task.manipulation
+    val manipulations = task.manipulations //liste aktiver manipulationen
+    //Manipulationen nach Typ extrahieren(bei DOUBLE Mode können mehrere gleichzeitig existieren)
+    val truncatedValue = manipulations.firstOrNull {
+        it.type == ManipulationType.TRUNCATED_VALUE_AXIS
+    }
 
+    val truncatedCategory = manipulations.firstOrNull {
+        it.type == ManipulationType.TRUNCATED_CATEGORY_AXIS
+    }
+
+    val distortion = manipulations.firstOrNull {
+        it.type == ManipulationType.DISTORTED_BAR_LENGTH
+    }
+
+    val highlight = manipulations.firstOrNull {
+        it.type == ManipulationType.COLOR_HIGHLIGHTING
+    }
+    //ColorHighlightlogik
+    val highlightEnabled =
+        !showCorrect && highlight != null
+
+    val highlightedIndex =
+        if (highlightEnabled)
+            highlight.categoryRange?.first //Nimmt einen zufälligen kategorieindex
+        else
+            null
     //unmanipulierte y-Werte
     val rawMinY = 0f
-    val rawMaxY = ydata.maxOrNull() ?: 1f
+    val baseMaxY = ydata.maxOrNull() ?: 1f
+    val baselineMaxY = baseMaxY * 1.20f
+
 
     //Zielwerte für Werte-Achse
-    val targetMinY = if (showCorrect)
-                        rawMinY
-                     else
-                         manipulation.type.manipulateMinValue(ydata, manipulation)
-
-    val targetMaxY = if (showCorrect)
-                        rawMaxY
-                     else
-                        manipulation.type.manipulateMaxValue(ydata, manipulation)
-
-    //Gesamtanzahl der Kategorien
-    val totalCount = xData.size
+    val targetMinY =
+        when {
+            showCorrect -> rawMinY
+            truncatedValue != null ->
+                truncatedValue.fixedMinValue ?: truncatedValue.type.manipulateMinValue(ydata, truncatedValue)
+            else -> rawMinY
+        }
+    val targetMaxY = truncatedValue?.fixedMaxValue ?: baselineMaxY
 
     //Startpunkt des sichbaren Kategoriebereich (wird nur verändert bei TRUNCATED_CATEGORY_AXIS Manipulation)
-    val targetCategoryStart = if (showCorrect || manipulation?.categoryRange == null)
-                                { 0f }
-                              else {
-                                manipulation.categoryRange.first.toFloat()
-                            }
-    //Endpunkt des sichbaren Kategoriebereich (wird nur verändert bei TRUNCATED_CATEGORY_AXIS Manipulation)
-    val targetCategoryEnd = if (showCorrect || manipulation?.categoryRange == null)
-                                { (totalCount - 1).toFloat() }
-                            else {
-                                manipulation.categoryRange.last.toFloat()
+    val targetCategoryStart =
+        when {
+            showCorrect -> 0f
+            truncatedCategory != null ->
+                truncatedCategory.categoryRange?.first?.toFloat() ?: 0f
+            else -> 0f
         }
-
+    //Endpunkt des sichbaren Kategoriebereich (wird nur verändert bei TRUNCATED_CATEGORY_AXIS Manipulation)
+    val targetCategoryEnd =
+        when {
+            showCorrect -> (xData.size - 1).toFloat()
+            truncatedCategory != null ->
+                truncatedCategory.categoryRange?.last?.toFloat()
+                    ?: (xData.size - 1).toFloat()
+            else -> (xData.size - 1).toFloat()
+        }
+    //Balkenverzerrung
+    val targetDistortion =
+        if (!showCorrect && distortion != null)
+            distortion.intensity
+        else
+            1f
     //Animationen für showCorrect wechsel
     val animatedMinY by animateFloatAsState(
         targetValue = targetMinY,
@@ -74,9 +107,12 @@ fun ManipulatedChart(task: Task, showCorrect: Boolean, modifier: Modifier = Modi
         targetValue = targetCategoryEnd,
         animationSpec = tween(1200, easing = FastOutSlowInEasing))
 
+    val animatedDistortion by animateFloatAsState(
+        targetValue = targetDistortion,
+        animationSpec = tween(1200, easing = FastOutSlowInEasing))
+
     //Rendering je nach ChartTyp
     when (task.chartType) {
-
         ChartType.BAR -> {
             BarChart(
                 yData = ydata,
@@ -86,6 +122,9 @@ fun ManipulatedChart(task: Task, showCorrect: Boolean, modifier: Modifier = Modi
                 maxY = animatedMaxY,
                 xStart = animatedCategoryStart,
                 xEnd = animatedCategoryEnd,
+                distortionFactor = animatedDistortion,
+                highlightedIndex = highlightedIndex,
+                highlightEnabled = highlightEnabled,
                 unit = unit
             )
         }
@@ -98,6 +137,8 @@ fun ManipulatedChart(task: Task, showCorrect: Boolean, modifier: Modifier = Modi
                 maxY = animatedMaxY,
                 xStart = animatedCategoryStart,
                 xEnd = animatedCategoryEnd,
+                highlightedIndex = highlightedIndex,
+                highlightEnabled = highlightEnabled,
                 unit = unit
             )
         }
@@ -110,6 +151,9 @@ fun ManipulatedChart(task: Task, showCorrect: Boolean, modifier: Modifier = Modi
                 maxX = animatedMaxY,
                 yStart = animatedCategoryStart,
                 yEnd = animatedCategoryEnd,
+                distortionFactor = animatedDistortion,
+                highlightedIndex = highlightedIndex,
+                highlightEnabled = highlightEnabled,
                 unit = unit
             )
         }

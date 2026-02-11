@@ -1,31 +1,61 @@
 package com.example.datadetective.data
 
+
+import com.example.datadetective.viewmodel.ManipulationMode
 import kotlin.random.Random
 
 //Erzeugt aus einem neutralen Datensatz eine spielbare Aufgabe mit zufälliger Manipulation
 object TaskGenerator {
-    fun generate(base: ChartData): Task {
+    fun generate(base: ChartData, mode: ManipulationMode): Task {
 
         //Zufälliger Diagrammtyp aus erlaubten Typen
         val chartType = base.supportedChartTypes.random()
         //Erlaubte Manipulationen für den Diagrammtyp
         val allowedManipulations = chartType.allowedManipulations
-        //Zufällige Manipulation aus den erlaubten
-        val manipulationType = allowedManipulations.random()
-
         val random = Random(base.id)
+        // Wieviele Manipulationen
+        val manipulationCount =
+            when (mode) {
+                ManipulationMode.SINGLE -> 1
+                ManipulationMode.DOUBLE -> 2.coerceAtMost(allowedManipulations.size)
+            }
 
-        //Erzeugt ein Manipulations-Objekt, das beschreibt, wie das Diagramm manipuliert wird
-        val manipulation = Manipulation(type = manipulationType, //ManipulationsTyp
-            intensity = ManipulationParameters.manipulationIntensity(manipulationType, random), //zufällige Stärke der Manipulation
-            categoryRange = if (manipulationType == ManipulationType.TRUNCATED_CATEGORY_AXIS)
-                ManipulationParameters.categoryRange(base.xData.size, random)//erzeugt bei Kategorie-Achse Manipulation einen zufälligen Bereich von Kategorien
-            else null)
 
-        //Richtige Antwort basierend auf Manipulationstyp
-        val correctAnswer = AnswerPool.correctAnswerFor(manipulationType)
+        //Zufällige Auswahl ein oder mehrerer Manipulationstypen
+        val selectedTypes = allowedManipulations.shuffled().take(manipulationCount)
+
+
+        //Erzeugt eine Manipulations-Liste, die Manipulationsobjekt(e) enthält, welche beschreiben, wie das Diagramm manipuliert wird
+
+        val manipulations = selectedTypes.map { type ->
+            when (type) {
+                ManipulationType.TRUNCATED_CATEGORY_AXIS -> {
+                    Manipulation(
+                        type = type,
+                        intensity = ManipulationParameters.manipulationIntensity(type, random),
+                        categoryRange = ManipulationParameters.categoryRange(base.xData.size, random))//erzeugt einen zufälligen Bereich von Kategorien
+                }
+                ManipulationType.COLOR_HIGHLIGHTING -> {
+                    val index =  Random.nextInt(base.xData.size) //zufälliger Index für highlighting
+                    Manipulation(
+                        type = type,
+                        intensity = random.nextFloat() * 0.4f + 0.4f,
+                        categoryRange = index..index)
+                }
+                else -> {
+                    Manipulation(
+                        type = type,
+                        intensity = ManipulationParameters.manipulationIntensity(type, random),
+                        categoryRange = null)
+                }
+            }
+        }
+
+
+        //Richtige Antwort(en) basierend auf Manipulationstyp(en)
+        val correctAnswers = AnswerPool.correctAnswersFor(manipulations.map { it.type })
         //Erzeugt Antwortmöglichkeiten
-        val (options, correctIndex) = generateAnswerOptions(correctAnswer, AnswerPool.allAnswers)
+        val (options, correctIndices) = generateAnswerOptions(correctAnswers, AnswerPool.allAnswers)
 
         return Task(
             id = base.id,
@@ -36,19 +66,20 @@ object TaskGenerator {
             yValues = base.yValues,
             xData = base.xData,
             options = options,
-            correctOptionIndex = correctIndex,
-            manipulation = manipulation
+            correctOptionIndices = correctIndices,
+            manipulations = manipulations
         )
     }
 
-    //Erzeugt multiple-Choice-Antwoeren aus einem Antwortpool mit genau einer Richtig-Antwort
-    fun generateAnswerOptions(correctAnswer: String, pool: List<String>, numberOfOptions: Int = 4): Pair<List<String>, Int>{
+    //Erzeugt multiple-Choice-Antworten aus einem Antwortpool mit einer oder mehrern Richtig-Antworten je nach manipulationstypenmenge
+    fun generateAnswerOptions(correctAnswers: List<String>, pool: List<String>, numberOfOptions: Int = 5): Pair<List<String>, Set<Int>> {
+        val wrongAnswers = pool.filter { it !in correctAnswers }
+        val distractors = wrongAnswers.shuffled().take(numberOfOptions - correctAnswers.size)
+        val allOptions = (correctAnswers + distractors).shuffled()
+        val correctIndices =
+            allOptions.mapIndexedNotNull { index, text ->
+                if (text in correctAnswers) index else null }.toSet()
 
-        val wrongAnswers = pool.filter { it != correctAnswer }
-        val distractors = wrongAnswers.shuffled().take(numberOfOptions-1)
-        val allOptions = (distractors + correctAnswer).shuffled()
-        val correctIndex = allOptions.indexOf(correctAnswer)
-        return Pair(allOptions,correctIndex)
+        return Pair(allOptions, correctIndices)
     }
 }
-

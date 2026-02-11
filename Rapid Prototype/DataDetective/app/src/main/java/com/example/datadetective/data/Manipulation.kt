@@ -1,10 +1,9 @@
 package com.example.datadetective.data
-import androidx.compose.remote.creation.random
 import kotlin.random.Random
 
 //Beschreibt eine konrete Manipulation, die auf ein Diagramm angewendet wird
-data class Manipulation (val type: ManipulationType, val intensity:Float,val categoryRange: IntRange? = null)
-
+data class Manipulation (val type: ManipulationType, val intensity:Float,val categoryRange: IntRange? = null,val fixedMinValue: Float? = null,
+                         val fixedMaxValue: Float? = null)
 
 
 //Hilfsobjekt zur Erzeugung zufälliger aber sinnvoll begrenzter Manipulationsparameter
@@ -15,7 +14,9 @@ object ManipulationParameters {
         when (type) {
             ManipulationType.TRUNCATED_VALUE_AXIS -> random.nextFloat() * 0.13f + 0.80f // Achse beginnt bei 80-98% des Minimalwerts
             ManipulationType.TRUNCATED_CATEGORY_AXIS -> 1f
-            ManipulationType.NONE -> 1f
+            ManipulationType.DISTORTED_BAR_LENGTH -> random.nextFloat() * 0.6f + 1.4f //Balken werden um 40%-99% verlängert
+            ManipulationType.COLOR_HIGHLIGHTING -> 1f
+            //ManipulationType.NONE -> 1f
         }
 
     //zufälliger Kategoriebereich(=weniger Balken) für verkürtze Kategorieachse bzw. Cherry Picking???

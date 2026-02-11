@@ -18,6 +18,9 @@ data class UserProfile(
     val solvedQuestions: Int,
     val currentStreak: Int,
     val highestStreak: Int,
+    //Speicherung für Magierachievment und MasteryChart
+    val solvedByManipulation: Map<ManipulationType, Int> = emptyMap(),
+    val failedByManipulation: Map<ManipulationType, Int> = emptyMap(),
 )
 
 class UserData(private val context: Context) {
@@ -30,9 +33,16 @@ class UserData(private val context: Context) {
         val SOLVED_QUESTIONS = intPreferencesKey("solvedQuestions")
         val CURRENT_STREAK = intPreferencesKey("currentStreak")
         val HIGHEST_STREAK = intPreferencesKey("highestStreak")
+        //Speicherung der Manipulationstypen in PreferenceKeys
+        fun solvedKey(type: ManipulationType) = intPreferencesKey("solved_${type.name}")
+        fun failedKey(type: ManipulationType) = intPreferencesKey("failed_${type.name}")
     }
 
     val userProfile: Flow<UserProfile> = context.dataStore.data.map { prefs ->
+        val solvedMap = ManipulationType.entries.associateWith { //liest anzahl korrekt gelöster aufgaben pro typ
+            prefs[PreferencesKeys.solvedKey(it)] ?: 0 }
+        val failedMap = ManipulationType.entries.associateWith {
+            prefs[PreferencesKeys.failedKey(it)] ?: 0 }
         UserProfile(
             name = "Karim",
             xp = prefs[PreferencesKeys.XP] ?: 0,
@@ -42,11 +52,13 @@ class UserData(private val context: Context) {
             doneQuestions = prefs[PreferencesKeys.DONE_QUESTIONS] ?: 0,
             currentStreak = prefs[PreferencesKeys.CURRENT_STREAK] ?: 0,
             highestStreak = prefs[PreferencesKeys.HIGHEST_STREAK] ?: 0,
+            solvedByManipulation = solvedMap,
+            failedByManipulation = failedMap,
         )
     }
 
     // Eine Funktion für alles nach einer Antwort
-    suspend fun submitAnswer(correctAnswer: Boolean) {
+    suspend fun submitAnswer(correctAnswer: Boolean, manipulationType: ManipulationType?) {
         context.dataStore.edit { prefs ->
             // Fragen-Counter
             val done = (prefs[PreferencesKeys.DONE_QUESTIONS] ?: 0) + 1
@@ -74,8 +86,16 @@ class UserData(private val context: Context) {
                 // Streak zurücksetzen bei falscher Antwort
                 prefs[PreferencesKeys.CURRENT_STREAK] = 0
             }
+            //Zähler für jeweiligen Manipulationstypen
+            manipulationType?.let { type ->
+                val key =
+                    if (correctAnswer)
+                        PreferencesKeys.solvedKey(type)
+                    else
+                        PreferencesKeys.failedKey(type)
+                prefs[key] = (prefs[key] ?: 0) + 1
         }
-    }
+    } }
 
     suspend fun setTitel(titel: String?) {
         context.dataStore.edit { prefs ->

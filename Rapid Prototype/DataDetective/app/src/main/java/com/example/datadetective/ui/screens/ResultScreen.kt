@@ -24,7 +24,7 @@ import com.example.datadetective.data.Task
 import com.example.datadetective.ui.charts.ManipulatedChart
 
 @Composable
-fun ResultScreen(task: Task, selectedAnswerIndex: Int, onNext:()-> Unit, onInfo:()-> Unit){
+fun ResultScreen(task: Task, selectedAnswerIndices: Set<Int>, onNext:()-> Unit, onInfo:()-> Unit){
 
     var showCorrect by remember { mutableStateOf(false) }
 
@@ -41,10 +41,11 @@ fun ResultScreen(task: Task, selectedAnswerIndex: Int, onNext:()-> Unit, onInfo:
 
         //Antwortauswertung
         task.options.forEachIndexed{ index, text ->
-            val isCorrect = index == task.correctOptionIndex
-            val isSelected = index == selectedAnswerIndex
+            val isCorrect = index in task.correctOptionIndices
+            val isSelected = index in selectedAnswerIndices
             val backgroundColor = when {
-                isCorrect-> Color(0xCD66F13B) //Richtige Antwort: grün
+                isCorrect && isSelected-> Color(0xCD66F13B) //Richtige Antwort: grün
+                isCorrect && !isSelected -> Color(0x8866F13B) // richtig, aber nicht ausgewählt
                 isSelected && !isCorrect -> Color(0xEBBE1F29) //falsche gewählte antwort: rot
                 else -> Color(0x00FFFFFF)
             }
@@ -68,7 +69,9 @@ fun ResultScreen(task: Task, selectedAnswerIndex: Int, onNext:()-> Unit, onInfo:
             Text("Historisches Beispiel")
         }
     Button(
-        onClick = onNext,
+        onClick = {
+            onNext()
+        },
         modifier = Modifier.fillMaxWidth()
     )   {
         Text("Nächste Aufgabe")

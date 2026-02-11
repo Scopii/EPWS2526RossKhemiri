@@ -7,7 +7,29 @@ enum class Condition {
     QUESTIONS_SOLVED,
     QUESTIONS_DONE,
     LOWEST_QUESTION_TIME,
-    LEVEL_REACHED
+    LEVEL_REACHED,
+    ALL_MANIPULATIONS_SOLVED;
+    //Berechneten aktuellen Fortschrittswert der Conditions auf Basis des Userprofiles
+    fun currentValue(profile: UserProfile): Int {
+        return when (this) {
+            HIGHEST_STREAK -> profile.highestStreak
+            QUESTIONS_SOLVED -> profile.solvedQuestions
+            QUESTIONS_DONE -> profile.doneQuestions
+            LEVEL_REACHED -> profile.level
+            LOWEST_QUESTION_TIME -> 0
+            ALL_MANIPULATIONS_SOLVED ->
+                ManipulationType.entries.toTypedArray().count { type -> //zählt die Anzahl der manTypen, welche mindestens einmal korrekt gelöst wurden
+                    (profile.solvedByManipulation[type] ?: 0) > 0
+                }
+        }
+    }
+    //Zielwert für Achievementerreichung
+    fun requiredValue(required: Int): Int {
+        return when (this) {
+            ALL_MANIPULATIONS_SOLVED -> ManipulationType.entries.size //Ziel=die anzahl aller exisitieren ManpulationType-Einträge
+            else -> required
+        }
+    }
 }
 
 data class AchievementData (
@@ -59,5 +81,10 @@ val achievements = listOf(
         condition = Condition.LEVEL_REACHED,
         required = 10,
     ),
-    //AchievementData( title = "Magier", hint = "Löse Eine Aufgabe zu jedem Manipulations-Typ"), ?? Wie implementieren
+    AchievementData(
+        title = "Magier",
+        hint = "Löse Eine Aufgabe zu jedem Manipulations-Typ",
+        condition = Condition.ALL_MANIPULATIONS_SOLVED,
+        required = 0,
+    )
 )

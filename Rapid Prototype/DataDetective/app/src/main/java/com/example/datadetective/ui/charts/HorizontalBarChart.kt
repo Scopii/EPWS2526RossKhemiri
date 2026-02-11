@@ -8,6 +8,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.nativeCanvas
+import kotlin.math.pow
 
 @Composable
 fun HorizontalBarChart(
@@ -18,9 +19,11 @@ fun HorizontalBarChart(
     maxX: Float,            //obere Grenze x-achse
     yStart: Float,          //startindex des sichtbaren Kategoriebereichs
     yEnd: Float,            //endindex des sichtbaren Kategoriebereichs
+    distortionFactor: Float = 1f, // Verzerrung der Balkenhöhe
+    highlightedIndex: Int? = null, // Welche Kategorie ist hervorgehoben
+    highlightEnabled: Boolean = false,
     xSteps: Int = 5,
     unit: String = "") {
-
     Canvas(modifier = modifier) {
 
         // Layout
@@ -31,11 +34,16 @@ fun HorizontalBarChart(
 
         val chartWidth = size.width - paddingLeft - paddingRight
         val chartHeight = size.height - paddingTop - paddingBottom
-
+        val baseColor = Color(0xFF3F51B5)
         val paint = Paint().apply {
             color = android.graphics.Color.BLACK
             textSize = 24f
             textAlign = Paint.Align.CENTER
+        }
+        val valuePaint = Paint().apply {
+            color = android.graphics.Color.BLACK
+            textSize = 24f
+            textAlign = Paint.Align.LEFT
         }
         //x-achse Rasterlinen+Beschriftung
         val stepValue = (maxX - minX) / xSteps
@@ -52,7 +60,7 @@ fun HorizontalBarChart(
 
             //x-achsenbeschriftung
             drawContext.canvas.nativeCanvas.drawText(
-                "${value.toInt()} $unit",
+                "${formatAxisValue(value, 1)} $unit",
                 x,
                 paddingTop + chartHeight + 30f,
                 paint.apply { textAlign = Paint.Align.RIGHT })
@@ -86,14 +94,38 @@ fun HorizontalBarChart(
 
             val yCenter = paddingTop + rowHeight * (localIndex + 0.5f)
             val normalized = ((value - minX) / (maxX - minX)).coerceIn(0f, 1f)
-            val barLength = normalized * chartWidth
+
+            //Verzerrung der Balkenhöhe bei DISTORTED_BAR_LENGTH
+            val relativeLength = normalized.pow(distortionFactor)
+            val barLength = relativeLength * chartWidth
+
+            // Farb-Hervorhebung bei COLOR_HIGHLIGHTING
+            val barColor = highlightColor(
+                baseColor = baseColor,
+                index = index,
+                highlightedIndex = highlightedIndex,
+                highlightEnabled = highlightEnabled
+            )
 
             //Balken
             drawRect(
-                color = Color(0xFF2196F3),
+                color = barColor,
                 topLeft = Offset(paddingLeft, yCenter - barHeight / 2),
                 size = Size(barLength, barHeight))
 
+            //Balkenbeschriftung (je nach balkenlänge beschriftung innerhalb oder außerhalbs des balkens)
+            val valueText ="${formatAxisValue(value, 1)} $unit"
+            val textWidth = valuePaint.measureText(valueText)
+            val textOutside = paddingLeft + barLength + 8f
+            val textInside = paddingLeft + barLength - textWidth - 8f
+            val drawInside = textOutside + textWidth > size.width - paddingRight
+            val textX = if (drawInside) textInside else textOutside
+            drawContext.canvas.nativeCanvas.drawText(
+                valueText,
+                textX,
+                yCenter + 8f,
+                valuePaint
+            )
             // Y-Achsenbeschriftung
             drawContext.canvas.nativeCanvas.drawText(
                 yData[index],
