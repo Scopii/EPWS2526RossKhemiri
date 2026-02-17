@@ -65,6 +65,46 @@ fun HomeScreen(
             }
         )
     }
+
+    var showResetDialog by remember { mutableStateOf(false) }
+
+    if (showResetDialog) {
+        AlertDialog(
+            onDismissRequest = { showResetDialog = false },
+            title = { Text("Wollen sie wirklich Ihren Progress zurücksetzen?") },
+            text = { Text("Kann nicht rückgängig gemacht werden!") },
+            confirmButton = {
+                Column {
+                    Button(
+                        onClick = {
+                            showResetDialog = false
+                            viewModel.resetProgress()
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Ja möchte ich")
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Button(
+                        onClick = {
+                            showResetDialog = false
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Doch nicht")
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showResetDialog = false }) {
+                    Text("Abbrechen")
+                }
+            }
+        )
+    }
+
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -112,7 +152,7 @@ fun HomeScreen(
             Text("Personal")
         }
 
-        Button(onClick = { viewModel.resetProgress() }) {
+        Button(onClick = { showResetDialog = true }) {
             Text("Reset Stats")
         }
     }

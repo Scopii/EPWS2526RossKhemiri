@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.datadetective.ui.charts.ManipulatedChart
@@ -17,8 +18,20 @@ fun GameScreen(viewModel: GameViewModel, onAnswerLocked:()-> Unit) {
 
     question?.let { q ->
         Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-            Text(q.title, style = MaterialTheme.typography.titleLarge) //Titel
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(q.title, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+                Text(
+                    "Run: ${viewModel.sessionQuestionCount}",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
             Spacer(modifier = Modifier.height(8.dp))
+
             Text(q.description, style = MaterialTheme.typography.bodyMedium) //Beschreibung
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -51,16 +64,23 @@ fun GameScreen(viewModel: GameViewModel, onAnswerLocked:()-> Unit) {
 
             Spacer(modifier = Modifier.weight(1f))
 
+            val requiredSelections = when (viewModel.manipulationMode) {
+                com.example.datadetective.viewmodel.ManipulationMode.SINGLE -> 1
+                com.example.datadetective.viewmodel.ManipulationMode.DOUBLE -> 2
+            }
+
+            val currentSelections = selectedIndices.size
+
             //Antwort lock in
             Button(
                 onClick = {
                     viewModel.submitAnswer()
                     onAnswerLocked()
                 },
-                enabled = selectedIndices.isNotEmpty(),
+                enabled = currentSelections == requiredSelections,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Antwort bestätigen")
+                Text("Antwort bestätigen ($currentSelections/$requiredSelections)")
             }
         }
     }

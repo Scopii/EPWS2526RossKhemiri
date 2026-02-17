@@ -99,6 +99,7 @@ class MainActivity : ComponentActivity() {
                             val fixedTask = remember(question.id) { question }
 
                             ResultScreen(
+                                viewModel = viewModel,
                                 task = fixedTask,
                                 selectedAnswerIndices = selectedIndices,
                                 onNext = {
@@ -109,7 +110,9 @@ class MainActivity : ComponentActivity() {
                                 },
                                 onInfo = {
                                     viewModel.prepareInfoTasks()
-                                    navController.navigate("info")}
+                                    navController.navigate("info")
+                                }
+
                             )
                         }
                     }

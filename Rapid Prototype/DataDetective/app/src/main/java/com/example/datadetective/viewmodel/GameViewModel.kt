@@ -39,6 +39,12 @@ class GameViewModel(
             )
     )
 
+    var sessionQuestionCount by mutableStateOf(1)
+        private set
+
+    var lastGainedXp by mutableStateOf(0)
+        private set
+
     var currentTask by mutableStateOf<Task?>(null)
         private set
 
@@ -52,27 +58,58 @@ class GameViewModel(
     fun startGame(mode: ManipulationMode) {
         manipulationMode = mode
         nextQuestion()
+        sessionQuestionCount = 1
     }
     //Generiert neue Aufgabe abhängig vom aktuellen modus
     fun nextQuestion() {
         currentTask = TaskGenerator.generate(sampleDataSet.random(), manipulationMode)
         selectedAnswerIndices = emptySet()
+        sessionQuestionCount++
     }
     fun selectAnswer(index: Int) {
-        selectedAnswerIndices =
-            if (index in selectedAnswerIndices)
-                selectedAnswerIndices - index
-            else
-                selectedAnswerIndices + index
+        val maxSelections = when (manipulationMode) {
+            ManipulationMode.SINGLE -> 1
+            ManipulationMode.DOUBLE -> 2
+        }
+
+        selectedAnswerIndices = if (index in selectedAnswerIndices) {
+            selectedAnswerIndices - index // Deselect
+        } else if (selectedAnswerIndices.size < maxSelections) {
+            selectedAnswerIndices + index // Select unter Limit
+        } else {
+            selectedAnswerIndices // Field nicht hinzufügen wenn Limit Max ist
+        }
     }
     fun submitAnswer() {
         val task = currentTask ?: return
-        val isCorrect = selectedAnswerIndices == task.correctOptionIndices
+
+        val correctAnswers = task.correctOptionIndices
+        val selectedCorrect = selectedAnswerIndices.intersect(correctAnswers).size
+        val totalCorrect = correctAnswers.size
+
+        // Calculate XP based on difficulty and correctness
+        val baseXp = when (manipulationMode) {
+            ManipulationMode.SINGLE -> 50
+            ManipulationMode.DOUBLE -> 100
+        }
+
+        val xpGained = if (totalCorrect == 0) {
+            0
+        } else {
+            val percentage = selectedCorrect.toFloat() / totalCorrect.toFloat()
+            (baseXp * percentage).toInt()
+        }
+
+        lastGainedXp = xpGained // Speichern für Popup
+        val isCorrect = selectedAnswerIndices == correctAnswers
+
         viewModelScope.launch {
             task.manipulations.forEach { manipulation ->
                 userData.submitAnswer(
                     correctAnswer = isCorrect,
-                    manipulationType = manipulation.type)
+                    manipulationType = manipulation.type,
+                    xpGained = xpGained,
+                )
             }
         }
     }

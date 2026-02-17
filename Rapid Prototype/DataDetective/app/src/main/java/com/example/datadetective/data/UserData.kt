@@ -58,16 +58,16 @@ class UserData(private val context: Context) {
     }
 
     // Eine Funktion für alles nach einer Antwort
-    suspend fun submitAnswer(correctAnswer: Boolean, manipulationType: ManipulationType?) {
+    suspend fun submitAnswer(correctAnswer: Boolean, manipulationType: ManipulationType?, xpGained: Int) {
         context.dataStore.edit { prefs ->
             // Fragen-Counter
             val done = (prefs[PreferencesKeys.DONE_QUESTIONS] ?: 0) + 1
             prefs[PreferencesKeys.DONE_QUESTIONS] = done
 
-            if (correctAnswer) {
+            if (xpGained > 0) {
                 // XP & Level
                 val currentXp = prefs[PreferencesKeys.XP] ?: 0
-                val newXp = currentXp + 50
+                val newXp = currentXp + xpGained
                 val newLevel = (newXp / 100) + 1
                 prefs[PreferencesKeys.XP] = newXp
                 prefs[PreferencesKeys.LEVEL] = newLevel
