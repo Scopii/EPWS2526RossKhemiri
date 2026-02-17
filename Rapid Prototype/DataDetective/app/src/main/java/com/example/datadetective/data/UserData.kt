@@ -18,9 +18,18 @@ data class UserProfile(
     val solvedQuestions: Int,
     val currentStreak: Int,
     val highestStreak: Int,
+
     //Speicherung für Magierachievment und MasteryChart
     val solvedByManipulation: Map<ManipulationType, Int> = emptyMap(),
     val failedByManipulation: Map<ManipulationType, Int> = emptyMap(),
+
+    // Für Snapshots für Tendenz-Vergleiche
+    val snapshotXp: Int = 0,
+    val snapshotLevel: Int = 1,
+    val snapshotSolved: Int = 0,
+    val snapshotDone: Int = 0,
+    val snapshotHighestStreak: Int = 0,
+    val snapshotSolvedByManipulation: Map<ManipulationType, Int> = emptyMap(),
 )
 
 class UserData(private val context: Context) {
@@ -36,13 +45,26 @@ class UserData(private val context: Context) {
         //Speicherung der Manipulationstypen in PreferenceKeys
         fun solvedKey(type: ManipulationType) = intPreferencesKey("solved_${type.name}")
         fun failedKey(type: ManipulationType) = intPreferencesKey("failed_${type.name}")
+
+        val SNAP_XP = intPreferencesKey("snap_xp")
+        val SNAP_LEVEL = intPreferencesKey("snap_level")
+        val SNAP_SOLVED = intPreferencesKey("snap_solved")
+        val SNAP_DONE = intPreferencesKey("snap_done")
+        val SNAP_HIGHEST_STREAK = intPreferencesKey("snap_highest_streak")
+        fun snapSolvedKey(type: ManipulationType) = intPreferencesKey("snap_solved_${type.name}")
     }
 
     val userProfile: Flow<UserProfile> = context.dataStore.data.map { prefs ->
         val solvedMap = ManipulationType.entries.associateWith { //liest anzahl korrekt gelöster aufgaben pro typ
             prefs[PreferencesKeys.solvedKey(it)] ?: 0 }
+
         val failedMap = ManipulationType.entries.associateWith {
             prefs[PreferencesKeys.failedKey(it)] ?: 0 }
+
+        val snapSolvedMap = ManipulationType.entries.associateWith {
+            prefs[PreferencesKeys.snapSolvedKey(it)] ?: 0
+        }
+
         UserProfile(
             name = "Karim",
             xp = prefs[PreferencesKeys.XP] ?: 0,
@@ -54,6 +76,13 @@ class UserData(private val context: Context) {
             highestStreak = prefs[PreferencesKeys.HIGHEST_STREAK] ?: 0,
             solvedByManipulation = solvedMap,
             failedByManipulation = failedMap,
+
+            snapshotXp = prefs[PreferencesKeys.SNAP_XP] ?: 0,
+            snapshotLevel = prefs[PreferencesKeys.SNAP_LEVEL] ?: 1,
+            snapshotSolved = prefs[PreferencesKeys.SNAP_SOLVED] ?: 0,
+            snapshotDone = prefs[PreferencesKeys.SNAP_DONE] ?: 0,
+            snapshotHighestStreak = prefs[PreferencesKeys.SNAP_HIGHEST_STREAK] ?: 0,
+            snapshotSolvedByManipulation = snapSolvedMap,
         )
     }
 
@@ -63,6 +92,19 @@ class UserData(private val context: Context) {
             // Fragen-Counter
             val done = (prefs[PreferencesKeys.DONE_QUESTIONS] ?: 0) + 1
             prefs[PreferencesKeys.DONE_QUESTIONS] = done
+
+
+            // Snapshot alle Paar Aufgaben
+            if (done % 5 == 0) {
+                prefs[PreferencesKeys.SNAP_XP] = prefs[PreferencesKeys.XP] ?: 0
+                prefs[PreferencesKeys.SNAP_LEVEL] = prefs[PreferencesKeys.LEVEL] ?: 1
+                prefs[PreferencesKeys.SNAP_SOLVED] = prefs[PreferencesKeys.SOLVED_QUESTIONS] ?: 0
+                prefs[PreferencesKeys.SNAP_DONE] = prefs[PreferencesKeys.DONE_QUESTIONS] ?: 0
+                prefs[PreferencesKeys.SNAP_HIGHEST_STREAK] = prefs[PreferencesKeys.HIGHEST_STREAK] ?: 0
+                ManipulationType.entries.forEach { type ->
+                    prefs[PreferencesKeys.snapSolvedKey(type)] = prefs[PreferencesKeys.solvedKey(type)] ?: 0
+                }
+            }
 
             if (xpGained > 0) {
                 // XP & Level

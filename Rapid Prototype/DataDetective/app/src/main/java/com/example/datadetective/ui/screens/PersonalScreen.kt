@@ -18,6 +18,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.example.datadetective.ui.charts.MasteryRadarChart
 import com.example.datadetective.ui.charts.masteryByManipulation
@@ -45,12 +46,17 @@ fun UserScreen(viewModel: GameViewModel){
         Spacer(modifier = Modifier.height(10.dp))
         StatRow {
             // Level
-            StatValue("Level", profile.level)
+            StatValue("Level", profile.level, profile.level - profile.snapshotLevel)
             // XP
-            StatValue("XP", profile.xp)
+            StatValue("XP", profile.xp, profile.xp - profile.snapshotXp)
+
             // Correct Percentage
-            val percentage = (profile.solvedQuestions.toFloat() / profile.doneQuestions.toFloat()) * 100f
-            StatValue("Correct","%.2f%%".format(percentage))
+            val curPercentage = if (profile.doneQuestions > 0)
+                (profile.solvedQuestions.toFloat() / profile.doneQuestions.toFloat()) * 100f else 0f
+            val lastPercentage = if (profile.snapshotDone > 0)
+                (profile.snapshotSolved.toFloat() / profile.snapshotDone.toFloat()) * 100f else 0f
+            val percentageDelta = (curPercentage - lastPercentage).toInt() // z.B. +5 oder -3
+            StatValue("Correct", "%.1f%%".format(curPercentage), percentageDelta)
             }
 
         Spacer(modifier = Modifier.height(6.dp))
@@ -60,16 +66,16 @@ fun UserScreen(viewModel: GameViewModel){
             // Current Streak
             StatValue("Current Streak", profile.currentStreak)
             // Highest Streak
-            StatValue("Highest Streak", profile.highestStreak)
+            StatValue("Highest Streak", profile.highestStreak, profile.highestStreak - profile.snapshotHighestStreak)
     }
         Spacer(modifier = Modifier.height(6.dp))
 
 
         StatRow {
             // Solved Questions
-            StatValue("Correct Questions", profile.solvedQuestions)
+            StatValue("Correct Questions", profile.solvedQuestions, profile.solvedQuestions - profile.snapshotSolved)
             // Done Questions
-            StatValue("Total Questions", profile.doneQuestions)
+            StatValue("Total Questions", profile.doneQuestions, profile.doneQuestions - profile.snapshotDone)
         }
     }
         Spacer(modifier = Modifier.height(6.dp))
@@ -92,7 +98,7 @@ fun StatRow(
 }
 //Card für Werte
 @Composable
-fun StatValue(label: String, value: Any) {
+fun StatValue(label: String, value: Any, delta: Int? = null) {
     Card {
         Column(
             modifier = Modifier.padding(8.dp),
@@ -100,9 +106,18 @@ fun StatValue(label: String, value: Any) {
         ) {
             Text(label, style = MaterialTheme.typography.bodySmall)
             Text(value.toString(), style = MaterialTheme.typography.bodyMedium)
+            if (delta != null && delta != 0) {
+                Text(
+                    text = if (delta > 0) "+$delta" else "$delta",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (delta > 0) Color(0xFF66BB6A) else Color(0xFFEF5350)
+                )
+            }
         }
     }
 }
+
+
 //Card für Chart
 @Composable
 fun StatCard(
