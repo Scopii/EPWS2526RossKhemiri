@@ -56,7 +56,11 @@ class MainActivity : ComponentActivity() {
                     composable("game") {
                         GameScreen(
                             viewModel = viewModel,
-                            onAnswerLocked = {navController.navigate("result")}
+                            onAnswerLocked = {
+                                navController.navigate("result") {
+                                    popUpTo("game") { inclusive = true } // Game aus Stack entfernen
+                                }
+                            }
                         )
                     }
 
@@ -96,15 +100,16 @@ class MainActivity : ComponentActivity() {
                         val selectedIndices = viewModel.selectedAnswerIndices
 
                         if (question != null) {
-                            val fixedTask = remember(question.id) { question }
+                            val fixedTask = remember{ question }
+                            val fixedIndices = remember{ selectedIndices }
 
                             ResultScreen(
                                 viewModel = viewModel,
                                 task = fixedTask,
-                                selectedAnswerIndices = selectedIndices,
+                                selectedAnswerIndices = fixedIndices,
                                 onNext = {
                                     navController.navigate("game") {
-                                        popUpTo("game") { inclusive = true }
+                                        popUpTo("home") { inclusive = false }
                                     }
                                     viewModel.nextQuestion()
                                 },
