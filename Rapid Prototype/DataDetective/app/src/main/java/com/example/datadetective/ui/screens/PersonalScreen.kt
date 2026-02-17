@@ -39,9 +39,16 @@ fun UserScreen(viewModel: GameViewModel){
         Text("Personal Stats", style = MaterialTheme.typography.headlineLarge)
 
         Spacer(modifier = Modifier.height(10.dp))
+
+        val snapshotMastery = remember(profile.snapshotSolvedByManipulation) {
+            masteryByManipulation(
+                profile.snapshotSolvedByManipulation,
+                profile.snapshotFailedByManipulation
+            )
+        }
         //MasteryChart
         StatCard(title = "Manipulation Mastery") {
-            MasteryRadarChart(mastery = masteryByType)
+            MasteryRadarChart(mastery = masteryByType, comparisonMastery = snapshotMastery)
         }
         Spacer(modifier = Modifier.height(10.dp))
         StatRow {
@@ -78,8 +85,7 @@ fun UserScreen(viewModel: GameViewModel){
             StatValue("Total Questions", profile.doneQuestions, profile.doneQuestions - profile.snapshotDone)
         }
     }
-        Spacer(modifier = Modifier.height(6.dp))
-    }
+}
 //Layout hilfen
 
 //Flexible Zeile

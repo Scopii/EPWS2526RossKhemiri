@@ -18,6 +18,7 @@ import kotlin.math.sin
 @Composable
 fun MasteryRadarChart(
     mastery: Map<ManipulationType, Float>,
+    comparisonMastery: Map<ManipulationType, Float>? = null,
     modifier: Modifier = Modifier
         .size(320.dp)
 ) {
@@ -108,6 +109,20 @@ fun MasteryRadarChart(
             color = Color(0xFF455A64),
             style = Stroke(width = 4f)
         )
+
+        if (comparisonMastery != null) {
+            val compPath = Path()
+            types.forEachIndexed { index, type ->
+                val value = comparisonMastery[type]?.coerceIn(0f, 1f) ?: 0f
+                val angle = angleStep * index - Math.PI.toFloat() / 2
+                val x = center.x + radius * value * cos(angle)
+                val y = center.y + radius * value * sin(angle)
+                if (index == 0) compPath.moveTo(x, y) else compPath.lineTo(x, y)
+            }
+            compPath.close()
+            drawPath(compPath, color = Color(0xFFFF9800).copy(alpha = 0.15f))
+            drawPath(compPath, color = Color(0xFFFF9800), style = Stroke(width = 2f))
+        }
     }
 }
 //Berechnet Erfolgsquote pro Manipulation
