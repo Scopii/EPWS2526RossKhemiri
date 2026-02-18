@@ -11,6 +11,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.example.datadetective.viewmodel.GameViewModel
 import com.example.datadetective.viewmodel.ManipulationMode
@@ -26,7 +27,6 @@ fun HomeScreen(
     val profile = viewModel.userProfile.collectAsState().value
 
     var showModeDialog by remember { mutableStateOf(false) }
-
     // Spielmodus auswahl über dialogfenster, anschließender aufgabenstart2w
     if (showModeDialog) {
         AlertDialog(
@@ -86,7 +86,15 @@ fun HomeScreen(
                     }
 
                     Spacer(modifier = Modifier.height(8.dp))
-
+                    Button(
+                        onClick = {
+                            showResetDialog = false
+                            viewModel.resetDailyChallenges()
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) { Text("Nur Daily Challenges zurücksetzen")
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
                     Button(
                         onClick = {
                             showResetDialog = false
@@ -96,15 +104,38 @@ fun HomeScreen(
                         Text("Doch nicht")
                     }
                 }
-            },
-            dismissButton = {
-                TextButton(onClick = { showResetDialog = false }) {
-                    Text("Abbrechen")
-                }
             }
         )
     }
 
+    //DIalogfenster für daily challenges
+    var showDailyDialog by remember { mutableStateOf(false) }
+    if (showDailyDialog) {
+        val challenges = viewModel.todayChallenges
+
+        AlertDialog(
+            onDismissRequest = { showDailyDialog = false },
+            title = { Text("Daily Challenges") },
+            text = {
+                Column {
+                    challenges.forEach { challenge ->
+                        val progress = challenge.condition.currentValue(profile)
+                        val completed = challenge.id in profile.dailyCompletedChallenges
+                        Text(challenge.hint)
+                        LinearProgressIndicator(
+                            progress = (progress.toFloat() / challenge.required).coerceIn(0f,1f),
+                            modifier = Modifier.fillMaxWidth())
+                        if (completed) { Text("✓ erledigt", color = Color(0xFF4CAF50)) }
+                        Spacer(Modifier.height(12.dp))
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showDailyDialog = false }) {
+                    Text("OK")
+                }
+            }
+        )}
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -151,9 +182,12 @@ fun HomeScreen(
         Button(onClick = onUserScreen) {
             Text("Personal")
         }
-
+        Button(onClick = { showDailyDialog = true }) {
+            Text("Daily Challenges")
+        }
         Button(onClick = { showResetDialog = true }) {
             Text("Reset Stats")
         }
+
     }
 }

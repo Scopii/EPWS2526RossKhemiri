@@ -6,16 +6,21 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.datadetective.data.ChartData
+import com.example.datadetective.data.DailyChallenge
 import com.example.datadetective.data.Manipulation
 import com.example.datadetective.data.Task
 import com.example.datadetective.data.TaskGenerator
 import com.example.datadetective.data.UserData
 import com.example.datadetective.data.UserProfile
+import com.example.datadetective.data.dailyPool
 import com.example.datadetective.data.sampleDataSet
 import infoData
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.time.LocalDate
+import kotlin.random.Random
 enum class ManipulationMode {
     SINGLE,
     DOUBLE
@@ -53,7 +58,7 @@ class GameViewModel(
         private set
     var manipulationMode by mutableStateOf(ManipulationMode.SINGLE) //Aktuell ausgewählter spielmodus
         private set
-
+    var dailyXpPopup by mutableStateOf<DailyChallenge?>(null)
     //Wird nach auswahl des Schwierigkeitsgrad aufgerufen
     fun startGame(mode: ManipulationMode) {
         manipulationMode = mode
@@ -111,9 +116,34 @@ class GameViewModel(
                     xpGained = xpGained,
                 )
             }
+            val profile = userData.userProfile.first()
+
+            var completedSet = profile.dailyCompletedChallenges
+            var popup: DailyChallenge? = null
+
+            //Challenges prüfen mit frischen Daten
+            todayChallenges.forEach { challenge ->
+
+                val progress = challenge.condition.currentValue(profile)
+                if (progress >= challenge.required &&
+                    challenge.id !in completedSet) {
+                    completedSet = completedSet + challenge.id
+                    popup = challenge
+                }
+            }
+            popup?.let {
+                dailyXpPopup = it
+                userData.grantDailyReward(it)
+                userData.saveDailyCompletion(completedSet)
+            }
         }
     }
-
+//Nimmt jeden tag neue zufällige challenges aus dem pool
+    val todayChallenges: List<DailyChallenge>
+        get() {
+            val seed = LocalDate.now().toEpochDay().toInt()
+            return dailyPool.shuffled(Random(seed)).take(3)
+        }
     fun setTitel(titel: String?) {
         viewModelScope.launch {
             userData.setTitel(titel)
@@ -123,7 +153,15 @@ class GameViewModel(
     fun resetProgress() {
         viewModelScope.launch {
             userData.resetProgress()
+            userData.resetDailyStats()
+            dailyXpPopup = null
+
         }
+    }
+    fun resetDailyChallenges() {
+        viewModelScope.launch {
+            userData.resetDailyStats()
+            dailyXpPopup = null }
     }
     fun prepareInfoTasks() { //Infotask(s) für where was this used button
         val task = currentTask ?: return

@@ -18,6 +18,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -139,6 +140,33 @@ fun ResultScreen(
                         .padding(24.dp)
                 )
             }
+        }
+
+
+        //Pop up für erreichte daily challenges
+        val dailyXp = viewModel.dailyXpPopup
+        if (dailyXp != null) {
+            AlertDialog(
+                onDismissRequest = { viewModel.dailyXpPopup = null },
+                title = { Text("Daily Challenge geschafft!") },
+                text = {
+                    Column {
+                        Text(
+                            dailyXp.hint,
+                            style = MaterialTheme.typography.bodyLarge)
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "+${dailyXp.xp} XP",
+                            style = MaterialTheme.typography.headlineMedium,
+                            color = Color(0xFF4CAF50))
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { viewModel.dailyXpPopup = null }) {
+                        Text("Nice!")
+                    }
+                }
+            )
         }
     }
 }

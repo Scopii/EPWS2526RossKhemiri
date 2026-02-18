@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import java.time.LocalDate
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "user_preferences")
 
@@ -32,6 +33,15 @@ data class UserProfile(
 
     val snapshotSolvedByManipulation: Map<ManipulationType, Int> = emptyMap(),
     val snapshotFailedByManipulation: Map<ManipulationType, Int> = emptyMap(),
+
+    // Daily Stats für DailyChallenges
+    val dailyDate: String = LocalDate.now().toString(),
+    val dailySolved: Int = 0,
+    val dailyDone: Int = 0,
+    val dailyCurrentStreak: Int = 0,
+    val dailyBestStreak: Int = 0,
+    val dailySolvedByManipulation: Map<ManipulationType, Int> = emptyMap(),
+    val dailyCompletedChallenges: Set<String> = emptySet()
 )
 
 class UserData(private val context: Context) {
@@ -55,6 +65,14 @@ class UserData(private val context: Context) {
         val SNAP_HIGHEST_STREAK = intPreferencesKey("snap_highest_streak")
         fun snapSolvedKey(type: ManipulationType) = intPreferencesKey("snap_solved_${type.name}")
         fun snapFailedKey(type: ManipulationType) = intPreferencesKey("snap_failed_${type.name}")
+
+        val DAILY_DATE = stringPreferencesKey("daily_date")
+        val DAILY_SOLVED = intPreferencesKey("daily_solved")
+        val DAILY_DONE = intPreferencesKey("daily_done")
+        val DAILY_STREAK = intPreferencesKey("daily_streak")
+        val DAILY_BEST = intPreferencesKey("daily_best")
+        fun dailySolvedKey(type: ManipulationType) = intPreferencesKey("daily_solved_${type.name}")
+        val DAILY_COMPLETED = stringPreferencesKey("daily_completed")
     }
 
     val userProfile: Flow<UserProfile> = context.dataStore.data.map { prefs ->
@@ -72,6 +90,29 @@ class UserData(private val context: Context) {
             prefs[PreferencesKeys.snapFailedKey(it)] ?: 0
         }
 
+        //Für Daily reset
+        val today = LocalDate.now().toString()
+        val storedDate = prefs[PreferencesKeys.DAILY_DATE]
+        val isNewDay = storedDate != today
+
+        val dailySolved = if (isNewDay) 0 else prefs[PreferencesKeys.DAILY_SOLVED] ?: 0
+        val dailyDone = if (isNewDay) 0 else prefs[PreferencesKeys.DAILY_DONE] ?: 0
+        val dailyStreak = if (isNewDay) 0 else prefs[PreferencesKeys.DAILY_STREAK] ?: 0
+        val dailyBest = if (isNewDay) 0 else prefs[PreferencesKeys.DAILY_BEST] ?: 0
+        val dailySolvedMap =
+            if (isNewDay)
+                ManipulationType.entries.associateWith { 0 }
+            else
+                ManipulationType.entries.associateWith { prefs[PreferencesKeys.dailySolvedKey(it)] ?: 0 }
+        val dailyCompleted =
+            if (isNewDay)
+                emptySet()
+            else
+                prefs[PreferencesKeys.DAILY_COMPLETED]
+                    ?.split("|")
+                    ?.filter { it.isNotBlank() }
+                    ?.toSet()
+                    ?: emptySet()
         UserProfile(
             name = "Karim",
             xp = prefs[PreferencesKeys.XP] ?: 0,
@@ -91,6 +132,13 @@ class UserData(private val context: Context) {
             snapshotHighestStreak = prefs[PreferencesKeys.SNAP_HIGHEST_STREAK] ?: 0,
             snapshotSolvedByManipulation = snapSolvedMap,
             snapshotFailedByManipulation = snapFailedMap,
+            dailyDate = today,
+            dailySolved = dailySolved,
+            dailyDone = dailyDone,
+            dailyCurrentStreak = dailyStreak,
+            dailyBestStreak = dailyBest,
+            dailySolvedByManipulation = dailySolvedMap,
+            dailyCompletedChallenges = dailyCompleted
         )
     }
 
@@ -147,6 +195,42 @@ class UserData(private val context: Context) {
                     prefs[PreferencesKeys.snapFailedKey(type)] = prefs[PreferencesKeys.failedKey(type)] ?: 0
                 }
             }
+            //resetet dailystats bei neuem tag und aktualieriset nach jeder aufgabe
+            val today = LocalDate.now().toString()
+            val storedDate = prefs[PreferencesKeys.DAILY_DATE]
+
+            if (storedDate != today) {
+                prefs[PreferencesKeys.DAILY_DATE] = today
+                prefs[PreferencesKeys.DAILY_SOLVED] = 0
+                prefs[PreferencesKeys.DAILY_DONE] = 0
+                prefs[PreferencesKeys.DAILY_STREAK] = 0
+                prefs[PreferencesKeys.DAILY_BEST] = 0
+                prefs[PreferencesKeys.DAILY_COMPLETED] = ""
+
+                ManipulationType.entries.forEach {
+                    prefs[PreferencesKeys.dailySolvedKey(it)] = 0
+                }
+            }
+            val dailyDone = (prefs[PreferencesKeys.DAILY_DONE] ?: 0) + 1
+            prefs[PreferencesKeys.DAILY_DONE] = dailyDone
+
+            if (correctAnswer) {
+                prefs[PreferencesKeys.DAILY_SOLVED] =
+                    (prefs[PreferencesKeys.DAILY_SOLVED] ?: 0) + 1
+
+                val streak = (prefs[PreferencesKeys.DAILY_STREAK] ?: 0) + 1
+                prefs[PreferencesKeys.DAILY_STREAK] = streak
+
+                val best = prefs[PreferencesKeys.DAILY_BEST] ?: 0
+                if (streak > best) prefs[PreferencesKeys.DAILY_BEST] = streak
+
+                manipulationType?.let {
+                    prefs[PreferencesKeys.dailySolvedKey(it)] =
+                        (prefs[PreferencesKeys.dailySolvedKey(it)] ?: 0) + 1
+                }
+            } else {
+                prefs[PreferencesKeys.DAILY_STREAK] = 0
+            }
     } }
 
     suspend fun setTitel(titel: String?) {
@@ -158,5 +242,35 @@ class UserData(private val context: Context) {
 
     suspend fun resetProgress() {
         context.dataStore.edit { it.clear() }
+    }
+
+    suspend fun grantDailyReward(challenge: DailyChallenge) {
+        context.dataStore.edit { prefs ->
+            val xp = prefs[PreferencesKeys.XP] ?: 0
+            prefs[PreferencesKeys.XP] = xp + challenge.xp
+        }
+    }
+    suspend fun resetDailyStats() {
+        context.dataStore.edit { prefs ->
+
+            val today = LocalDate.now().toString()
+
+            prefs[PreferencesKeys.DAILY_DATE] = today
+            prefs[PreferencesKeys.DAILY_SOLVED] = 0
+            prefs[PreferencesKeys.DAILY_DONE] = 0
+            prefs[PreferencesKeys.DAILY_STREAK] = 0
+            prefs[PreferencesKeys.DAILY_BEST] = 0
+            prefs[PreferencesKeys.DAILY_COMPLETED] = ""
+
+            ManipulationType.entries.forEach {
+                prefs[PreferencesKeys.dailySolvedKey(it)] = 0
+            }
+        }
+    }
+    suspend fun saveDailyCompletion(set: Set<String>) {
+        context.dataStore.edit { prefs ->
+            prefs[PreferencesKeys.DAILY_COMPLETED] =
+                set.joinToString("|")
+        }
     }
 }
