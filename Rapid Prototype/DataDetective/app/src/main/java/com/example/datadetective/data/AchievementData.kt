@@ -71,9 +71,9 @@ val achievements = listOf(
     ),
     AchievementData(
         title = "Blitz",
-        hint = "Löse eine Aufgabe in unter 3 Sekunden",
+        hint = "Löse eine Aufgabe in unter 1 Sekunden",
         condition = Condition.LOWEST_QUESTION_TIME,
-        required = 3,
+        required = 1,
     ),
     AchievementData(
         title = "Sage",

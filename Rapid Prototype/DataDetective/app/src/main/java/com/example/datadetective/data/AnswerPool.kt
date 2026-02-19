@@ -9,7 +9,6 @@ object AnswerPool {
         "Keine Manipulation vorhanden",
         "Unvollständige Datenbasis",
         "Korrelation wird als Kausalität dargestellt",
-        "Hier könnte ihre Werbung stehen!",
         "Kategorieachse wurde verkürzt",
         "Balkenproportionen sind falsch"
     )

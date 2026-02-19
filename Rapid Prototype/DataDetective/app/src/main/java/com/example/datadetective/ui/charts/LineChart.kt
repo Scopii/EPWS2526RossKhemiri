@@ -101,12 +101,12 @@ fun LineChart(
                 else if (isSegmentHighlighted)
                     baseColor
                 else
-                    baseColor.copy(alpha = 0.6f) //transparenz wert für nicht gehighlightede indicies
+                    baseColor.copy(alpha = 0.4f) //transparenz wert für nicht gehighlightede indicies
             drawLine(
                 color = lineColor,
                 start = Offset(xForIndex(i), yForValue(yData[i])),
                 end = Offset(xForIndex(i + 1), yForValue(yData[i + 1])),
-                strokeWidth = 4f
+                strokeWidth = 6f
             )
 
         //Punkte + X-Beschriftung
@@ -123,7 +123,7 @@ fun LineChart(
                 highlightEnabled = highlightEnabled)
             drawCircle(
                 color = pointColor,
-                radius = 6f,
+                radius = 8f,
                 center = Offset(x, y)
             )
             // X-achsenbeschriftung

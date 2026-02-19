@@ -94,8 +94,8 @@ val infoData = listOf(
     ChartData(
         id = 401,
         title = "TODO",
-        yValues = listOf(1f,3f,7f),
-        xData = listOf("TODO", "TODO", "TODO"),
+        yValues = listOf(1f,3f,7f,5f,6f,1f),
+        xData = listOf("TODO", "TODO", "TODO","TODO", "TODO", "TODO"),
         unit = "TODO",
         description = "TODO",
         supportedChartTypes = setOf(ChartType.BAR),
@@ -106,13 +106,13 @@ val infoData = listOf(
     ChartData(
         id = 402,
         title = "TODO",
-        yValues = listOf(1f,3f,7f),
-        xData = listOf("TODO", "TODO", "TODO"),
+        yValues = listOf(1f,3f,7f,5f,6f,1f),
+        xData = listOf("TODO", "TODO", "TODO","TODO", "TODO", "TODO"),
         unit = "TODO",
         description = "TODO",
         supportedChartTypes = setOf(ChartType.LINE),
         supportedManipulations = setOf(ManipulationType.COLOR_HIGHLIGHTING),
-        fixedCategoryRange = 1..1,
+        fixedCategoryRange = 2..3,
         explanation = "TODO"
     ),
     ChartData(
