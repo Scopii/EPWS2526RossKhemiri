@@ -23,8 +23,13 @@ import java.time.LocalDate
 import kotlin.random.Random
 enum class ManipulationMode {
     SINGLE,
-    DOUBLE
+    DOUBLE,
+    SURVIVAL //Neuer Spielmodus survival
 }
+data class SurvivalResult( //Für survival run ende screen
+    val streak: Int,
+    val best: Int
+)
 class GameViewModel(
     private val userData: UserData
 ) : ViewModel() {
@@ -59,15 +64,40 @@ class GameViewModel(
     var manipulationMode by mutableStateOf(ManipulationMode.SINGLE) //Aktuell ausgewählter spielmodus
         private set
     var dailyXpPopup by mutableStateOf<DailyChallenge?>(null)
+    var survivalStreak by mutableStateOf(0)
+        private set
+    var currentTaskMode by mutableStateOf(ManipulationMode.SINGLE)
+        private set
+    var survivalBest by mutableStateOf(0)
+        private set
+    var survivalRunResult by mutableStateOf<SurvivalResult?>(null)
+        private set
+    private var survivalQuestionCount = 0
     //Wird nach auswahl des Schwierigkeitsgrad aufgerufen
     fun startGame(mode: ManipulationMode) {
         manipulationMode = mode
+        if (mode == ManipulationMode.SURVIVAL) {
+            survivalStreak = 0
+            survivalQuestionCount = 0
+            survivalBest = userProfile.value.survivalBest
+        }
         nextQuestion()
         sessionQuestionCount = 1
     }
     //Generiert neue Aufgabe abhängig vom aktuellen modus
     fun nextQuestion() {
-        currentTask = TaskGenerator.generate(sampleDataSet.random(), manipulationMode)
+        currentTaskMode = when (manipulationMode) {
+            ManipulationMode.SURVIVAL -> {
+                survivalQuestionCount++
+                if (survivalQuestionCount <= 3) { // Erste 3 aufgaben immer single, danach zufällig ob single/double
+                    ManipulationMode.SINGLE
+                } else {
+                    if (Random.nextBoolean()) ManipulationMode.SINGLE else ManipulationMode.DOUBLE
+                }
+            }
+            else -> manipulationMode
+        }
+        currentTask = TaskGenerator.generate(sampleDataSet.random(),currentTaskMode)
         selectedAnswerIndices = emptySet()
         sessionQuestionCount++
     }
@@ -75,6 +105,7 @@ class GameViewModel(
         val maxSelections = when (manipulationMode) {
             ManipulationMode.SINGLE -> 1
             ManipulationMode.DOUBLE -> 2
+            ManipulationMode.SURVIVAL -> 2
         }
 
         selectedAnswerIndices = if (index in selectedAnswerIndices) {
@@ -96,6 +127,7 @@ class GameViewModel(
         val baseXp = when (manipulationMode) {
             ManipulationMode.SINGLE -> 50
             ManipulationMode.DOUBLE -> 100
+            ManipulationMode.SURVIVAL -> 0
         }
 
         val xpGained = if (totalCorrect == 0) {
@@ -107,13 +139,33 @@ class GameViewModel(
 
         lastGainedXp = xpGained // Speichern für Popup
         val isCorrect = selectedAnswerIndices == correctAnswers
-
+        //Survivalmode logik
+        if (manipulationMode == ManipulationMode.SURVIVAL) {
+            if (isCorrect) {
+                survivalStreak++
+                if (survivalStreak > survivalBest) {
+                    survivalBest = survivalStreak
+                    // Persistieren im DataStore
+                    viewModelScope.launch {
+                        userData.saveSurvivalBest(survivalBest)
+                    }
+                }
+            } else {
+                survivalRunResult = SurvivalResult(
+                    streak = survivalStreak,
+                    best = survivalBest
+                )
+                survivalStreak = 0
+                return
+            }
+        }
         viewModelScope.launch {
             task.manipulations.forEach { manipulation ->
                 userData.submitAnswer(
                     correctAnswer = isCorrect,
                     manipulationType = manipulation.type,
                     xpGained = xpGained,
+                    normalMode = manipulationMode != ManipulationMode.SURVIVAL
                 )
             }
             val profile = userData.userProfile.first()
@@ -144,6 +196,10 @@ class GameViewModel(
             val seed = LocalDate.now().toEpochDay().toInt()
             return dailyPool.shuffled(Random(seed)).take(3)
         }
+    fun dismissSurvivalResult() {
+        survivalRunResult = null
+        currentTask = null
+    }
     fun setTitel(titel: String?) {
         viewModelScope.launch {
             userData.setTitel(titel)

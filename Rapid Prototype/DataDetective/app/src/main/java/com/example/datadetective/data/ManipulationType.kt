@@ -3,7 +3,7 @@ package com.example.datadetective.data
 //Definiert die verschiedenen Arten von Diagrammmanipulationen
 enum class ManipulationType(val label: String) {
 
-    TRUNCATED_VALUE_AXIS("Werteachsenverkürzung/Keine Null Baseline") { //Verkürzte Werte-Achse (Y bei Bar/Line, X bei HorizontalBar) damit Achse nicht bei 0 beginnt
+    TRUNCATED_VALUE_AXIS("Keine 0-Baseline") { //Verkürzte Werte-Achse (Y bei Bar/Line, X bei HorizontalBar) damit Achse nicht bei 0 beginnt
 
         override fun manipulateMinValue(data: List<Float>, manipulation: Manipulation): Float {
             manipulation.fixedMinValue?.let { return it } //Für infodata
@@ -15,7 +15,7 @@ enum class ManipulationType(val label: String) {
         override fun categoryRange(size: Int, manipulation: Manipulation): IntRange? =
             manipulation.categoryRange //berechnet eingegrenzten Kategorie Bereich
     },
-    DISTORTED_BAR_LENGTH("Balkenproportionen sind falsch"),
+    DISTORTED_BAR_LENGTH("Verzerrte Balken"),
     COLOR_HIGHLIGHTING("Farb-Highlighting")
     /*
     PARTIAL_AXIS

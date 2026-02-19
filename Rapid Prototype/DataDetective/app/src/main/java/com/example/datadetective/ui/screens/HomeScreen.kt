@@ -56,6 +56,17 @@ fun HomeScreen(
                     ) {
                         Text("2 Manipulationen")
                     }
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Button(
+                        onClick = {
+                            showModeDialog = false
+                            onStartGame(ManipulationMode.SURVIVAL)
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Survival Mode")
+                    }
                 }
             },
             dismissButton = {

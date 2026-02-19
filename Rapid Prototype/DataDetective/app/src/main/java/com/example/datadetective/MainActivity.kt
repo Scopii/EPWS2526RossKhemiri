@@ -19,7 +19,9 @@ import com.example.datadetective.ui.screens.ResultScreen
 import com.example.datadetective.ui.theme.DataDetectiveTheme
 import com.example.datadetective.viewmodel.GameViewModel
 import androidx.lifecycle.ViewModelProvider
+import com.example.datadetective.ui.screens.SurvivalScreen
 import com.example.datadetective.ui.screens.UserScreen
+import com.example.datadetective.viewmodel.ManipulationMode
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -57,8 +59,19 @@ class MainActivity : ComponentActivity() {
                         GameScreen(
                             viewModel = viewModel,
                             onAnswerLocked = {
-                                navController.navigate("result") {
-                                    popUpTo("game") { inclusive = true } // Game aus Stack entfernen
+
+                                if (viewModel.manipulationMode == ManipulationMode.SURVIVAL
+                                    && viewModel.survivalRunResult != null) {
+
+                                    navController.navigate("survival_end") {
+                                        popUpTo("game") { inclusive = true }
+                                    }
+
+                                } else {
+
+                                    navController.navigate("result") {
+                                        popUpTo("game") { inclusive = true }
+                                    }
                                 }
                             }
                         )
@@ -118,6 +131,21 @@ class MainActivity : ComponentActivity() {
                                     navController.navigate("info")
                                 }
 
+                            )
+                        }
+                    }
+                    composable("survival_end") {
+                        val result = viewModel.survivalRunResult
+
+                        if (result != null) {
+                            SurvivalScreen(
+                                result = result,
+                                onBackToHome = {
+                                    viewModel.dismissSurvivalResult()
+                                    navController.navigate("home") {
+                                        popUpTo("home") { inclusive = true }
+                                    }
+                                }
                             )
                         }
                     }

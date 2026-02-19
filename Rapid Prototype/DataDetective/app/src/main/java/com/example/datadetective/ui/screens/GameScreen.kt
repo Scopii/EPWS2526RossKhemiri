@@ -64,9 +64,10 @@ fun GameScreen(viewModel: GameViewModel, onAnswerLocked:()-> Unit) {
 
             Spacer(modifier = Modifier.weight(1f))
 
-            val requiredSelections = when (viewModel.manipulationMode) {
+            val requiredSelections = when (viewModel.currentTaskMode) {
                 com.example.datadetective.viewmodel.ManipulationMode.SINGLE -> 1
                 com.example.datadetective.viewmodel.ManipulationMode.DOUBLE -> 2
+                com.example.datadetective.viewmodel.ManipulationMode.SURVIVAL -> 0
             }
 
             val currentSelections = selectedIndices.size

@@ -6,10 +6,12 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -25,65 +27,132 @@ import com.example.datadetective.ui.charts.masteryByManipulation
 import com.example.datadetective.viewmodel.GameViewModel
 
 @Composable
-fun UserScreen(viewModel: GameViewModel){
+fun UserScreen(viewModel: GameViewModel) {
+
     val profile = viewModel.userProfile.collectAsState().value
-    //Berechnet Erfolgsquoten pro Manipulationstyp
+
     val masteryByType = remember(profile.solvedByManipulation, profile.failedByManipulation) {
         masteryByManipulation(profile.solvedByManipulation, profile.failedByManipulation)
     }
 
-    Column(
-        modifier = Modifier.fillMaxSize().padding(6.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ){
-        Text("Personal Stats", style = MaterialTheme.typography.headlineLarge)
+    val snapshotMastery = remember(profile.snapshotSolvedByManipulation) {
+        masteryByManipulation(
+            profile.snapshotSolvedByManipulation,
+            profile.snapshotFailedByManipulation
+        )
+    }
 
-        Spacer(modifier = Modifier.height(10.dp))
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
 
-        val snapshotMastery = remember(profile.snapshotSolvedByManipulation) {
-            masteryByManipulation(
-                profile.snapshotSolvedByManipulation,
-                profile.snapshotFailedByManipulation
+        item {
+            Spacer(Modifier.height(6.dp))
+            Text(
+                "Personal Stats",
+                style = MaterialTheme.typography.headlineMedium
             )
         }
-        //MasteryChart
-        StatCard(title = "Manipulation Mastery") {
-            MasteryRadarChart(mastery = masteryByType, comparisonMastery = snapshotMastery)
-        }
-        Spacer(modifier = Modifier.height(10.dp))
-        StatRow {
-            // Level
-            StatValue("Level", profile.level, profile.level - profile.snapshotLevel)
-            // XP
-            StatValue("XP", profile.xp, profile.xp - profile.snapshotXp)
 
-            // Correct Percentage
-            val curPercentage = if (profile.doneQuestions > 0)
-                (profile.solvedQuestions.toFloat() / profile.doneQuestions.toFloat()) * 100f else 0f
-            val lastPercentage = if (profile.snapshotDone > 0)
-                (profile.snapshotSolved.toFloat() / profile.snapshotDone.toFloat()) * 100f else 0f
-            val percentageDelta = (curPercentage - lastPercentage).toInt() // z.B. +5 oder -3
-            StatValue("Correct", "%.1f%%".format(curPercentage), percentageDelta)
+        item {
+            SectionCard {
+                StatRow {
+                    // Level
+                    StatValue("Level", profile.level, profile.level - profile.snapshotLevel)
+                    // XP
+                    StatValue("XP", profile.xp, profile.xp - profile.snapshotXp)
+                    // Correct Percentage
+                    val curPercentage = if (profile.doneQuestions > 0)
+                        (profile.solvedQuestions.toFloat() / profile.doneQuestions.toFloat()) * 100f else 0f
+                    val lastPercentage = if (profile.snapshotDone > 0)
+                        (profile.snapshotSolved.toFloat() / profile.snapshotDone.toFloat()) * 100f else 0f
+                    val percentageDelta = (curPercentage - lastPercentage).toInt() // z.B. +5 oder -3
+                    StatValue("Correct", "%.1f%%".format(curPercentage), percentageDelta)
+                }
             }
-
-        Spacer(modifier = Modifier.height(6.dp))
-
-
-        StatRow {
-            // Current Streak
-            StatValue("Current Streak", profile.currentStreak)
-            // Highest Streak
-            StatValue("Highest Streak", profile.highestStreak, profile.highestStreak - profile.snapshotHighestStreak)
-    }
-        Spacer(modifier = Modifier.height(6.dp))
-
-
-        StatRow {
-            // Solved Questions
-            StatValue("Correct Questions", profile.solvedQuestions, profile.solvedQuestions - profile.snapshotSolved)
-            // Done Questions
-            StatValue("Total Questions", profile.doneQuestions, profile.doneQuestions - profile.snapshotDone)
         }
+
+
+
+        item {
+            SectionCard {
+                StatRow {
+                    // Current Streak
+                    StatValue("Current Streak", profile.currentStreak)
+                    // Highest Streak
+                    StatValue("Highest Streak", profile.highestStreak, profile.highestStreak - profile.snapshotHighestStreak)
+                    //Survival Highest Streak
+                    StatValue("Survival Best", profile.survivalBest)
+                }
+            }
+        }
+
+        item {
+            SectionCard {
+                StatRow {
+                    // Solved Questions
+                    StatValue("Correct Questions", profile.solvedQuestions, profile.solvedQuestions - profile.snapshotSolved)
+                    // Done Questions
+                    StatValue("Total Questions", profile.doneQuestions, profile.doneQuestions - profile.snapshotDone)
+                }
+            }
+        }
+
+        //Mastery
+        item {
+            StatCard(title = "Manipulation Mastery") {
+                MasteryRadarChart(
+                    mastery = masteryByType,
+                    comparisonMastery = snapshotMastery,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(1f)
+                )
+            }
+        }
+
+        //Manipulation Streaks
+        item {
+            StatCard(title = "Manipulation Streaks") {
+
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+
+                    profile.manipulationCurrentStreaks
+                        .forEach { (type, current) ->
+
+                            val best = profile.manipulationBestStreaks[type] ?: 0
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 6.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    type.label,
+                                    style = MaterialTheme.typography.bodyLarge
+                                )
+                                Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
+                                    Text(
+                                        "Current: $current",
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                    Text(
+                                        "Best: $best",
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                }
+                            }
+                        }
+                }
+            }
+        }
+
+        item { Spacer(Modifier.height(16.dp)) }
     }
 }
 //Layout hilfen
@@ -102,16 +171,33 @@ fun StatRow(
         content()
     }
 }
-//Card für Werte
+//Cards für Werte
+@Composable
+fun SectionCard(content: @Composable ColumnScope.() -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(vertical = 6.dp, horizontal = 6.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            content = content
+        )
+    }
+}
 @Composable
 fun StatValue(label: String, value: Any, delta: Int? = null) {
-    Card {
+    Card(
+        modifier = Modifier
+            .padding(horizontal = 4.dp)
+    ) {
         Column(
-            modifier = Modifier.padding(8.dp),
+            modifier = Modifier.padding(vertical = 6.dp, horizontal = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(label, style = MaterialTheme.typography.bodySmall)
-            Text(value.toString(), style = MaterialTheme.typography.bodyMedium)
+            Text(label, style = MaterialTheme.typography.labelSmall)
+            Text(value.toString(), style = MaterialTheme.typography.bodyLarge)
+
             if (delta != null && delta != 0) {
                 Text(
                     text = if (delta > 0) "+$delta" else "$delta",
@@ -122,7 +208,6 @@ fun StatValue(label: String, value: Any, delta: Int? = null) {
         }
     }
 }
-
 
 //Card für Chart
 @Composable

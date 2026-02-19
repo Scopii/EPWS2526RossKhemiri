@@ -41,7 +41,13 @@ data class UserProfile(
     val dailyCurrentStreak: Int = 0,
     val dailyBestStreak: Int = 0,
     val dailySolvedByManipulation: Map<ManipulationType, Int> = emptyMap(),
-    val dailyCompletedChallenges: Set<String> = emptySet()
+    val dailyCompletedChallenges: Set<String> = emptySet(),
+
+    //Bestwert für Survivalmode runs
+    val survivalBest: Int = 0,
+    //Streaks pro Manipulationstyp
+    val manipulationCurrentStreaks: Map<ManipulationType, Int> = emptyMap(),
+    val manipulationBestStreaks: Map<ManipulationType, Int> = emptyMap(),
 )
 
 class UserData(private val context: Context) {
@@ -73,14 +79,21 @@ class UserData(private val context: Context) {
         val DAILY_BEST = intPreferencesKey("daily_best")
         fun dailySolvedKey(type: ManipulationType) = intPreferencesKey("daily_solved_${type.name}")
         val DAILY_COMPLETED = stringPreferencesKey("daily_completed")
+        val SURVIVAL_BEST = intPreferencesKey("survival_best")
+        fun streakKey(type: ManipulationType) = intPreferencesKey("streak_${type.name}")
+        fun bestStreakKey(type: ManipulationType) = intPreferencesKey("best_streak_${type.name}")
     }
 
     val userProfile: Flow<UserProfile> = context.dataStore.data.map { prefs ->
         val solvedMap = ManipulationType.entries.associateWith { //liest anzahl korrekt gelöster aufgaben pro typ
             prefs[PreferencesKeys.solvedKey(it)] ?: 0 }
-
         val failedMap = ManipulationType.entries.associateWith {
             prefs[PreferencesKeys.failedKey(it)] ?: 0 }
+
+        val streakMap = ManipulationType.entries.associateWith {
+            prefs[PreferencesKeys.streakKey(it)] ?: 0 }
+        val bestStreakMap = ManipulationType.entries.associateWith {
+            prefs[PreferencesKeys.bestStreakKey(it)] ?: 0 }
 
         val snapSolvedMap = ManipulationType.entries.associateWith {
             prefs[PreferencesKeys.snapSolvedKey(it)] ?: 0
@@ -89,7 +102,6 @@ class UserData(private val context: Context) {
         val snapFailedMap = ManipulationType.entries.associateWith {
             prefs[PreferencesKeys.snapFailedKey(it)] ?: 0
         }
-
         //Für Daily reset
         val today = LocalDate.now().toString()
         val storedDate = prefs[PreferencesKeys.DAILY_DATE]
@@ -138,12 +150,15 @@ class UserData(private val context: Context) {
             dailyCurrentStreak = dailyStreak,
             dailyBestStreak = dailyBest,
             dailySolvedByManipulation = dailySolvedMap,
-            dailyCompletedChallenges = dailyCompleted
+            dailyCompletedChallenges = dailyCompleted,
+            survivalBest = prefs[PreferencesKeys.SURVIVAL_BEST] ?: 0,
+            manipulationCurrentStreaks = streakMap,
+            manipulationBestStreaks = bestStreakMap
         )
     }
 
     // Eine Funktion für alles nach einer Antwort
-    suspend fun submitAnswer(correctAnswer: Boolean, manipulationType: ManipulationType?, xpGained: Int) {
+    suspend fun submitAnswer(correctAnswer: Boolean, manipulationType: ManipulationType?, xpGained: Int,normalMode: Boolean = true) {
         context.dataStore.edit { prefs ->
             // Fragen-Counter
             val done = (prefs[PreferencesKeys.DONE_QUESTIONS] ?: 0) + 1
@@ -156,20 +171,25 @@ class UserData(private val context: Context) {
                 val newLevel = (newXp / 100) + 1
                 prefs[PreferencesKeys.XP] = newXp
                 prefs[PreferencesKeys.LEVEL] = newLevel
-
+            }
+            if (correctAnswer) {
                 // Stats
                 val solved = (prefs[PreferencesKeys.SOLVED_QUESTIONS] ?: 0) + 1
                 prefs[PreferencesKeys.SOLVED_QUESTIONS] = solved
 
                 // Streak
-                val streak = (prefs[PreferencesKeys.CURRENT_STREAK] ?: 0) + 1
-                prefs[PreferencesKeys.CURRENT_STREAK] = streak
+                if (normalMode) {//damit bei survival mode der normale streak counter nicht hochgeht
+                    val streak = (prefs[PreferencesKeys.CURRENT_STREAK] ?: 0) + 1
+                    prefs[PreferencesKeys.CURRENT_STREAK] = streak
 
-                val highestStreak = (prefs[PreferencesKeys.HIGHEST_STREAK] ?: 0) + 1
-                if (streak >= highestStreak) prefs[PreferencesKeys.HIGHEST_STREAK] = streak
+                    val highestStreak = (prefs[PreferencesKeys.HIGHEST_STREAK] ?: 0) + 1
+                    if (streak >= highestStreak) prefs[PreferencesKeys.HIGHEST_STREAK] = streak
+                }
             } else {
+                if (normalMode) {
                 // Streak zurücksetzen bei falscher Antwort
                 prefs[PreferencesKeys.CURRENT_STREAK] = 0
+                }
             }
             //Zähler für jeweiligen Manipulationstypen
             manipulationType?.let { type ->
@@ -180,7 +200,22 @@ class UserData(private val context: Context) {
                         PreferencesKeys.failedKey(type)
                 prefs[key] = (prefs[key] ?: 0) + 1
             }
+            //Streaks für einzele Manipulationstypen erhöhen
+            manipulationType?.let { type ->
 
+                val streakKey = PreferencesKeys.streakKey(type)
+                val bestKey = PreferencesKeys.bestStreakKey(type)
+
+                if (correctAnswer) {
+                    val newStreak = (prefs[streakKey] ?: 0) + 1
+                    prefs[streakKey] = newStreak
+
+                    val best = prefs[bestKey] ?: 0
+                    if (newStreak > best) prefs[bestKey] = newStreak
+                } else {
+                    prefs[streakKey] = 0
+                }
+            }
             // Snapshot alle Paar Aufgaben
             if (done % 10 == 0) {
                 prefs[PreferencesKeys.SNAP_XP] = prefs[PreferencesKeys.XP] ?: 0
@@ -271,6 +306,12 @@ class UserData(private val context: Context) {
         context.dataStore.edit { prefs ->
             prefs[PreferencesKeys.DAILY_COMPLETED] =
                 set.joinToString("|")
+        }
+    }
+    suspend fun saveSurvivalBest(best: Int) {
+        context.dataStore.edit { prefs ->
+            val current = prefs[PreferencesKeys.SURVIVAL_BEST] ?: 0
+            if (best > current) prefs[PreferencesKeys.SURVIVAL_BEST] = best
         }
     }
 }

@@ -18,6 +18,7 @@ object TaskGenerator {
             when (mode) {
                 ManipulationMode.SINGLE -> 1
                 ManipulationMode.DOUBLE -> 2.coerceAtMost(allowedManipulations.size)
+                ManipulationMode.SURVIVAL -> 0
             }
 
 
